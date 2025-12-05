@@ -4,7 +4,7 @@ set -e
 ORG="ArkeonProject"
 USER="davilpzDev"
 
-echo "🚀 Aplicando reglas correctas para main + develop en '$ORG'…"
+echo "Aplicando reglas correctas para main + develop en '$ORG'…"
 
 REPOS=$(gh repo list "$ORG" --limit 200 --json name -q '.[].name')
 
@@ -15,13 +15,13 @@ for repo in $REPOS; do
   echo "========================================================================="
 
   ###############################################
-  # 1️⃣ CREAR DEVELOP SI NO EXISTE
+  # 1. CREAR DEVELOP SI NO EXISTE
   ###############################################
 
   if gh api "/repos/$ORG/$repo/branches/develop" >/dev/null 2>&1; then
-    echo "✔ develop existe"
+    echo "develop existe"
   else
-    echo "⚠ develop no existe — creándola desde main…"
+    echo "develop no existe — creándola desde main…"
 
     sha=$(gh api "/repos/$ORG/$repo/branches/main" -q '.commit.sha')
 
@@ -33,10 +33,12 @@ for repo in $REPOS; do
   fi
 
   ###############################################
-  # 2️⃣ PROTECCIÓN PARA DEVELOP
+  # 2. PROTECCIÓN PARA DEVELOP
+  #    (allow force pushes = true, pero restricciones
+  #     hacen que SOLO tú puedas hacer push)
   ###############################################
 
-  echo "🔧 Protegiendo develop…"
+  echo "Protegiendo develop…"
 
   DEVELOP_JSON=$(cat <<EOF
 {
@@ -53,7 +55,7 @@ for repo in $REPOS; do
     "apps": []
   },
   "required_linear_history": true,
-  "allow_force_pushes": false,
+  "allow_force_pushes": true,
   "allow_deletions": false
 }
 EOF
@@ -65,36 +67,15 @@ EOF
     -H "Accept: application/vnd.github+json" \
     --input <(echo "$DEVELOP_JSON")
 
-  echo "✔ develop protegido (fase 1)."
+  echo "develop protegido correctamente."
+  echo "Force push permitido SOLO porque nadie más puede pushear."
 
 
   ###############################################
-  # 2️⃣B PERMITIR FORCE PUSH SOLO PARA TI
+  # 3. PROTECCIÓN PARA MAIN (Modo producción)
   ###############################################
 
-  FORCE_JSON=$(cat <<EOF
-{
-  "users": ["$USER"],
-  "teams": [],
-  "apps": []
-}
-EOF
-)
-
-  gh api \
-    -X PUT \
-    "/repos/$ORG/$repo/branches/develop/protection/allow_force_pushes" \
-    -H "Accept: application/vnd.github+json" \
-    --input <(echo "$FORCE_JSON")
-
-  echo "✔ develop ahora permite force-push SOLO a $USER."
-
-
-  ###############################################
-  # 3️⃣ PROTECCIÓN PARA MAIN (MODE PROD)
-  ###############################################
-
-  echo "🔒 Protegiendo main…"
+  echo "Protegiendo main…"
 
   MAIN_JSON=$(cat <<EOF
 {
@@ -127,12 +108,12 @@ EOF
     -H "Accept: application/vnd.github+json" \
     --input <(echo "$MAIN_JSON")
 
-  echo "✔ main protegido correctamente."
+  echo "main protegido correctamente."
 
 done
 
 echo ""
-echo "🎉 Configuración aplicada en TODOS los repos correctamente."
-echo "✔ develop NUNCA quedará behind (PR + sin checks)"
-echo "✔ develop permite force-push solo a ti"
-echo "✔ main protegida como entorno productivo"
+echo "Configuración aplicada en TODOS los repos."
+echo "develop NUNCA quedará behind"
+echo "develop permite force push pero SOLO tú puedes push"
+echo "main queda protegida como entorno productivo"
