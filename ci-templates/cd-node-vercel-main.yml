@@ -1,40 +1,48 @@
-name: CD - Node + Vercel (main)
+name: 🚀 Deploy - Node + Vercel (main)
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   deploy:
-    name: Deploy to Vercel
     runs-on: ubuntu-latest
 
-    if: |
-      hashFiles('package.json') != '' &&
-      contains(github.secrets.*, 'VERCEL_PROJECT_ID')
-
-    env:
-      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-      VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
-      VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
-
     steps:
-      - uses: actions/checkout@v4
-      - run: npm install -g pnpm@10 --force
-      - uses: actions/setup-node@v4
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 🧰 Setup Node
+        uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'pnpm'
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm run build
-      - uses: amondnet/vercel-action@v25
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: 📦 Install PNPM
+        run: npm install -g pnpm@10 --force
+
+      - name: 📦 Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: 🧱 Build
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+        run: pnpm run build
+
+      - name: 🚀 Deploy to Vercel
+        uses: amondnet/vercel-action@v25
         with:
           vercel-token: ${{ secrets.VERCEL_TOKEN }}
           vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
           vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-          working-directory: ./
+
+      - name: 🏷️ Tag version
+        run: |
+          VERSION="v$(jq -r .version package.json)"
+          git tag -a "$VERSION" -m "Release $VERSION" || true
+          git push origin "$VERSION" || true
