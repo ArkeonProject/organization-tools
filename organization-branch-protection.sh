@@ -4,23 +4,24 @@ set -e
 ORG="ArkeonProject"
 USER="davilpzDev"
 
-echo " Aplicando reglas correctas para main + develop en '$ORG'…"
+echo "🚀 Aplicando reglas correctas para main + develop en '$ORG'…"
 
 REPOS=$(gh repo list "$ORG" --limit 200 --json name -q '.[].name')
 
 for repo in $REPOS; do
   echo ""
   echo "========================================================================="
-  echo " Procesando repositorio: $repo"
+  echo "➡ Procesando repositorio: $repo"
   echo "========================================================================="
 
   ###############################################
-  # 1. Crear develop si no existe
+  # 1️⃣ CREAR DEVELOP SI NO EXISTE
   ###############################################
+
   if gh api "/repos/$ORG/$repo/branches/develop" >/dev/null 2>&1; then
-    echo "develop existe"
+    echo "✔ develop existe"
   else
-    echo "develop no existe — creándola desde main…"
+    echo "⚠ develop no existe — creándola desde main…"
 
     sha=$(gh api "/repos/$ORG/$repo/branches/main" -q '.commit.sha')
 
@@ -28,19 +29,16 @@ for repo in $REPOS; do
       -f ref="refs/heads/develop" \
       -f sha="$sha"
 
-    echo "develop creada"
+    echo "✔ develop creada"
   fi
 
   ###############################################
-  # 2. Protección DEVELOP (sin checks, con force push)
+  # 2️⃣ PROTECCIÓN PARA DEVELOP
   ###############################################
-  echo "Protegiendo develop…"
 
-  gh api \
-    -X PUT \
-    "/repos/$ORG/$repo/branches/develop/protection" \
-    -H "Accept: application/vnd.github+json" \
-    -f "$(cat <<EOF
+  echo "🔧 Protegiendo develop…"
+
+  DEVELOP_JSON=$(cat <<EOF
 {
   "required_status_checks": null,
   "enforce_admins": false,
@@ -59,21 +57,24 @@ for repo in $REPOS; do
   "allow_deletions": false
 }
 EOF
-)"
+)
+
+  gh api \
+    -X PUT \
+    "/repos/$ORG/$repo/branches/develop/protection" \
+    -H "Accept: application/vnd.github+json" \
+    --input <(echo "$DEVELOP_JSON")
 
   echo "✔ develop protegido correctamente."
 
 
   ###############################################
-  # 3. Protección MAIN (full producción, sin force push)
+  # 3️⃣ PROTECCIÓN PARA MAIN (FULL PROD)
   ###############################################
-  echo "Protegiendo main…"
 
-  gh api \
-    -X PUT \
-    "/repos/$ORG/$repo/branches/main/protection" \
-    -H "Accept: application/vnd.github+json" \
-    -f "$(cat <<EOF
+  echo "🔒 Protegiendo main…"
+
+  MAIN_JSON=$(cat <<EOF
 {
   "required_status_checks": {
     "strict": true,
@@ -96,13 +97,19 @@ EOF
   }
 }
 EOF
-)"
+)
 
-  echo "main protegido correctamente."
+  gh api \
+    -X PUT \
+    "/repos/$ORG/$repo/branches/main/protection" \
+    -H "Accept: application/vnd.github+json" \
+    --input <(echo "$MAIN_JSON")
+
+  echo "✔ main protegido correctamente."
 
 done
 
 echo ""
-echo "Configuración de protección aplicada a TODOS los repos."
-echo "develop ya NO quedará behind nunca más"
-echo "main protegida como entorno productivo"
+echo "🎉 Configuración aplicada en TODOS los repos correctamente."
+echo "✔ develop NUNCA quedará behind"
+echo "✔ main queda protegida como producción"
