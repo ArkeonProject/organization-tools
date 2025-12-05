@@ -1,57 +1,35 @@
-# 🏛 ArkeonProject — Organization Tools
+# ArkeonProject — CI/CD Architecture
 
-Repositorio oficial de herramientas internas para estandarizar:
+This repository contains the official CI/CD architecture used across the entire organization.
 
-- ⚡ Protección de ramas (main / develop)
-- ⚙️ Políticas GitFlow profesionales
-- 🧰 Scripts automáticos para toda la organización
-- 🔄 Creación automática de ramas
-- 🔐 Cumplimiento de reglas CI/CD
+## Folder structure
 
----
+ci-templates/ → Reusable base workflows
+scripts/ → Automation utilities (install CI, configure secrets)
 
-## 📌 Contenido
 
-### `organization-branch-protection.sh`
-Script que:
-- Crea `develop` si no existe
-- Aplica reglas estrictas a `main`
-- Aplica reglas flexibles y correctas a `develop`
-- Valida la configuración
-- Funciona en todos los repos de la organización automáticamente
+## Installing CI/CD in a project
 
-Ideal para garantizar un estándar profesional sin GitHub Team.
+Inside a repository:
 
----
 
-## 🚀 Uso rápido
 
-```bash
-chmod +x organization-branch-protection.sh
-./organization-branch-protection.sh
-```
+gh repo clone ArkeonProject/organization-tools
+cd organization-tools/scripts
+./setup-ci.sh
 
----
 
-## 🌐 Requisitos
+## Configure Vercel secrets
 
-- GitHub CLI (`gh`)
-- Acceso administrador en la organización
-- Autenticación previa con:
 
-```bash
-gh auth login
-```
 
----
+./scripts/setup-vercel-secrets.sh ArkeonProject/repo <projectId> <orgId>
 
-## 🧠 Nota profesional
 
-Este repositorio centraliza todas las políticas de desarrollo de ArkeonProject:
+## Workflows included
 
-- GitFlow real
-- Linear history
-- Ramas protegidas
-- CI/CD estándar
-- Automatizaciones internas
+- Universal CI for develop  
+- CD for Node + Vercel  
+- CD for Python + Docker  
+- Release Please automated release handling  
 
