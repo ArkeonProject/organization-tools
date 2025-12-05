@@ -53,7 +53,7 @@ for repo in $REPOS; do
     "apps": []
   },
   "required_linear_history": true,
-  "allow_force_pushes": true,
+  "allow_force_pushes": false,
   "allow_deletions": false
 }
 EOF
@@ -65,11 +65,33 @@ EOF
     -H "Accept: application/vnd.github+json" \
     --input <(echo "$DEVELOP_JSON")
 
-  echo "✔ develop protegido correctamente."
+  echo "✔ develop protegido (fase 1)."
 
 
   ###############################################
-  # 3️⃣ PROTECCIÓN PARA MAIN (FULL PROD)
+  # 2️⃣B PERMITIR FORCE PUSH SOLO PARA TI
+  ###############################################
+
+  FORCE_JSON=$(cat <<EOF
+{
+  "users": ["$USER"],
+  "teams": [],
+  "apps": []
+}
+EOF
+)
+
+  gh api \
+    -X PUT \
+    "/repos/$ORG/$repo/branches/develop/protection/allow_force_pushes" \
+    -H "Accept: application/vnd.github+json" \
+    --input <(echo "$FORCE_JSON")
+
+  echo "✔ develop ahora permite force-push SOLO a $USER."
+
+
+  ###############################################
+  # 3️⃣ PROTECCIÓN PARA MAIN (MODE PROD)
   ###############################################
 
   echo "🔒 Protegiendo main…"
@@ -111,5 +133,6 @@ done
 
 echo ""
 echo "🎉 Configuración aplicada en TODOS los repos correctamente."
-echo "✔ develop NUNCA quedará behind"
-echo "✔ main queda protegida como producción"
+echo "✔ develop NUNCA quedará behind (PR + sin checks)"
+echo "✔ develop permite force-push solo a ti"
+echo "✔ main protegida como entorno productivo"
