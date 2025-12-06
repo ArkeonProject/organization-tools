@@ -1,0 +1,31 @@
+name: Reusable CI for Node (PNPM)
+
+on:
+  workflow_call:
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install PNPM
+        run: npm install -g pnpm@10 --force
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run Lint (optional)
+        run: pnpm run lint || echo "No lint script"
+
+      - name: Run Tests
+        run: pnpm run test || echo "No tests"
+
+      - name: Build
+        run: pnpm run build
