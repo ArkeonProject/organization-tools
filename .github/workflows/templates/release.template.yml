@@ -1,6 +1,9 @@
 name: Release
 
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch:
     inputs:
       version-bump:
@@ -16,18 +19,20 @@ on:
 jobs:
   prepare-release:
     name: Prepare Release
-    uses: ArkeonProject/organization-tools/.github/workflows/release-prepare.yml@main
+    if: github.event_name == 'workflow_dispatch'
+    uses: ArkeonProject/organization-tools/.github/workflows/release-prepare.yml@v1.0.1
     with:
       version-bump: ${{ github.event.inputs.version-bump }}
-      project-type: 'node'  # CHANGE TO: node or python
+      project-type: 'node'
       base-branch: 'develop'
+    secrets: inherit
   
   publish-release:
     name: Publish Release
-    needs: prepare-release
-    if: github.ref == 'refs/heads/main'
-    uses: ArkeonProject/organization-tools/.github/workflows/release-publish.yml@main
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    uses: ArkeonProject/organization-tools/.github/workflows/release-publish.yml@v1.0.1
     with:
-      project-type: 'node'  # CHANGE TO: node or python
+      project-type: 'node'
       create-github-release: true
       auto-back-merge: true
+    secrets: inherit
