@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1] - 2025-12-06
+
+### Fixed
+- **CRITICAL**: Moved reusable workflows from `.github/workflows/reusable/` to `.github/workflows/` (top level)
+  - GitHub Actions requires reusable workflows at the top level, not in subdirectories
+  - Updated all 6 templates to reference new paths
+  - This fixes the error: "workflows must be defined at the top level of the .github/workflows/ directory"
+
+### Changed
+- Updated README.md to reflect new workflow structure
+
 ## [1.0.0] - 2025-12-06
 
 ### Added
