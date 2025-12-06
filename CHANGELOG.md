@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.2] - 2025-12-06
+
+### Added
+- New `release-drafter.template.yml` for automatic release notes generation
+
+### Changed
+- Updated all templates to reference `@v1.0.1` (correct version)
+- Added `secrets: inherit` to CI, release, and hotfix templates
+- Improved release template with dual triggers (push to main + workflow_dispatch)
+- Enhanced dependabot template with better labels and commit prefixes
+- Changed `project-type` parameter support in release and hotfix templates
+
+### Fixed
+- Templates now use correct workflow paths without `/reusable/` subdirectory
+
 ## [1.0.1] - 2025-12-06
 
 ### Fixed
