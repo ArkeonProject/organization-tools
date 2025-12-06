@@ -8,7 +8,7 @@ on:
 jobs:
   build-and-deploy:
     name: Build & Deploy Docker
-    uses: ArkeonProject/organization-tools/.github/workflows/reusable/cd-python-docker.yml@main
+    uses: ArkeonProject/organization-tools/.github/workflows/cd-python-docker.yml@main
     with:
       image-name: 'my-app'  # CHANGE THIS
       push-to-ghcr: true

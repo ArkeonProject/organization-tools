@@ -9,7 +9,7 @@ on:
 jobs:
   ci:
     name: Continuous Integration
-    uses: ArkeonProject/organization-tools/.github/workflows/reusable/ci-python.yml@main
+    uses: ArkeonProject/organization-tools/.github/workflows/ci-python.yml@main
     with:
       python-version: '3.11'
       use-poetry: false

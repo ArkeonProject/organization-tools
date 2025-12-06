@@ -9,7 +9,7 @@ on:
 jobs:
   ci:
     name: Continuous Integration
-    uses: ArkeonProject/organization-tools/.github/workflows/reusable/ci-node.yml@main
+    uses: ArkeonProject/organization-tools/.github/workflows/ci-node.yml@main
     with:
       node-version: '20'
       package-manager: 'pnpm'
