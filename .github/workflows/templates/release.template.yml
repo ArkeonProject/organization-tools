@@ -16,7 +16,7 @@ on:
 jobs:
   prepare-release:
     name: Prepare Release
-    uses: ArkeonProject/organization-tools/.github/workflows/reusable/release-prepare.yml@main
+    uses: ArkeonProject/organization-tools/.github/workflows/release-prepare.yml@main
     with:
       version-bump: ${{ github.event.inputs.version-bump }}
       project-type: 'node'  # CHANGE TO: node or python
@@ -26,7 +26,7 @@ jobs:
     name: Publish Release
     needs: prepare-release
     if: github.ref == 'refs/heads/main'
-    uses: ArkeonProject/organization-tools/.github/workflows/reusable/release-publish.yml@main
+    uses: ArkeonProject/organization-tools/.github/workflows/release-publish.yml@main
     with:
       project-type: 'node'  # CHANGE TO: node or python
       create-github-release: true

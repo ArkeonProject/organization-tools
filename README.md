@@ -8,7 +8,7 @@ This repository contains all the workflows, templates, composite actions, and sc
 
 ## 📦 Contents
 
-### Reusable Workflows (`.github/workflows/reusable/`)
+### Reusable Workflows (`.github/workflows/`)
 - `ci-node.yml` - CI for Node.js projects (supports pnpm, npm, yarn, bun)
 - `ci-python.yml` - CI for Python projects
 - `cd-node-vercel.yml` - Deploy Node.js to Vercel
