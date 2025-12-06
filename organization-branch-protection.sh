@@ -54,7 +54,7 @@ for repo in $REPOS; do
     "teams": [],
     "apps": []
   },
-  "required_linear_history": true,
+  "required_linear_history": false,
   "allow_force_pushes": true,
   "allow_deletions": false
 }
