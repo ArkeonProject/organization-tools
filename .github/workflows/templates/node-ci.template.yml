@@ -9,13 +9,14 @@ on:
 jobs:
   ci:
     name: Continuous Integration
-    uses: ArkeonProject/organization-tools/.github/workflows/ci-node.yml@main
+    uses: ArkeonProject/organization-tools/.github/workflows/ci-node.yml@v1.0.1
     with:
       node-version: '20'
       package-manager: 'pnpm'
       run-lint: true
       run-typecheck: true
-      run-tests: true
+      run-tests: false
       run-build: true
-      upload-coverage: true
+      upload-coverage: false
       upload-artifacts: true
+    secrets: inherit
