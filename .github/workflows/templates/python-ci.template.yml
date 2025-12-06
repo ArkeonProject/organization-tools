@@ -1,0 +1,19 @@
+name: CI
+
+on:
+  push:
+    branches: [develop]
+  pull_request:
+    branches: [develop, main]
+
+jobs:
+  ci:
+    name: Continuous Integration
+    uses: ArkeonProject/organization-tools/.github/workflows/reusable/ci-python.yml@main
+    with:
+      python-version: '3.11'
+      use-poetry: false
+      run-lint: true
+      run-format-check: true
+      run-tests: true
+      upload-coverage: true

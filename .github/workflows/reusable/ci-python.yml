@@ -1,0 +1,213 @@
+# .github/workflows/reusable/ci-python.yml
+# Reusable workflow for Python CI
+
+name: 🐍 CI - Python
+
+on:
+  workflow_call:
+    inputs:
+      python-version:
+        description: 'Python version'
+        required: false
+        type: string
+        default: '3.11'
+      
+      working-directory:
+        description: 'Working directory'
+        required: false
+        type: string
+        default: '.'
+      
+      use-poetry:
+        description: 'Use Poetry for dependency management'
+        required: false
+        type: boolean
+        default: false
+      
+      run-lint:
+        description: 'Run linting (ruff/flake8)'
+        required: false
+        type: boolean
+        default: true
+      
+      run-format-check:
+        description: 'Run format checking (black)'
+        required: false
+        type: boolean
+        default: true
+      
+      run-type-check:
+        description: 'Run type checking (mypy)'
+        required: false
+        type: boolean
+        default: false
+      
+      run-security-check:
+        description: 'Run security check (bandit)'
+        required: false
+        type: boolean
+        default: false
+      
+      run-tests:
+        description: 'Run tests with pytest'
+        required: false
+        type: boolean
+        default: true
+      
+      test-args:
+        description: 'Additional pytest arguments'
+        required: false
+        type: string
+        default: '--maxfail=1 --disable-warnings -v'
+      
+      upload-coverage:
+        description: 'Upload test coverage'
+        required: false
+        type: boolean
+        default: false
+      
+      build-package:
+        description: 'Build Python package'
+        required: false
+        type: boolean
+        default: false
+
+    outputs:
+      tests-passed:
+        description: 'Tests passed successfully'
+        value: ${{ jobs.ci.outputs.tests-passed }}
+
+jobs:
+  ci:
+    name: CI Pipeline
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    
+    outputs:
+      tests-passed: ${{ steps.test.outcome == 'success' }}
+    
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
+    
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: 🐍 Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ inputs.python-version }}
+          cache: ${{ inputs.use-poetry && 'poetry' || 'pip' }}
+          cache-dependency-path: |
+            ${{ inputs.working-directory }}/requirements*.txt
+            ${{ inputs.working-directory }}/pyproject.toml
+            ${{ inputs.working-directory }}/poetry.lock
+      
+      - name: 📦 Install Poetry
+        if: inputs.use-poetry
+        run: |
+          python -m pip install --upgrade pip
+          pip install poetry
+          poetry config virtualenvs.in-project true
+      
+      - name: 📦 Install dependencies (Poetry)
+        if: inputs.use-poetry
+        run: poetry install --no-interaction --no-root
+      
+      - name: 📦 Install dependencies (pip)
+        if: ${{ !inputs.use-poetry }}
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements-dev.txt ]; then
+            pip install -r requirements-dev.txt
+          elif [ -f requirements.txt ]; then
+            pip install -r requirements.txt
+          elif [ -f pyproject.toml ]; then
+            pip install -e ".[dev]" || pip install -e .
+          fi
+      
+      - name: 🔍 Run Ruff (linting)
+        if: inputs.run-lint
+        run: |
+          pip install ruff
+          ruff check .
+        continue-on-error: false
+      
+      - name: 🔍 Run Black (format check)
+        if: inputs.run-format-check
+        run: |
+          pip install black
+          black --check .
+        continue-on-error: false
+      
+      - name: 🔍 Run mypy (type check)
+        if: inputs.run-type-check
+        run: |
+          pip install mypy
+          mypy .
+        continue-on-error: false
+      
+      - name: 🔒 Run Bandit (security check)
+        if: inputs.run-security-check
+        run: |
+          pip install bandit
+          bandit -r . -f json -o bandit-report.json || true
+          bandit -r . -f txt
+        continue-on-error: true
+      
+      - name: 🧪 Run tests with pytest
+        id: test
+        if: inputs.run-tests
+        run: |
+          pip install pytest pytest-cov pytest-xdist
+          if [ "${{ inputs.use-poetry }}" = "true" ]; then
+            poetry run pytest ${{ inputs.test-args }} --cov --cov-report=xml --cov-report=term
+          else
+            pytest ${{ inputs.test-args }} --cov --cov-report=xml --cov-report=term
+          fi
+        continue-on-error: false
+      
+      - name: 📊 Upload coverage to Codecov
+        if: inputs.upload-coverage && steps.test.outcome == 'success'
+        uses: codecov/codecov-action@v4
+        with:
+          working-directory: ${{ inputs.working-directory }}
+          files: ./coverage.xml
+          flags: unittests
+          fail_ci_if_error: false
+      
+      - name: 📦 Build Python package
+        if: inputs.build-package
+        run: |
+          pip install build
+          if [ "${{ inputs.use-poetry }}" = "true" ]; then
+            poetry build
+          else
+            python -m build
+          fi
+      
+      - name: 📦 Upload package artifacts
+        if: inputs.build-package
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-package-${{ github.sha }}
+          path: |
+            ${{ inputs.working-directory }}/dist/
+          retention-days: 7
+      
+      - name: 📋 Job Summary
+        if: always()
+        run: |
+          echo "## 🐍 Python CI Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Check | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Lint (Ruff) | ${{ steps.lint.outcome || 'skipped' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Format (Black) | ${{ steps.format.outcome || 'skipped' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Type Check (mypy) | ${{ steps.typecheck.outcome || 'skipped' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Security (Bandit) | ${{ steps.security.outcome || 'skipped' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Tests (pytest) | ${{ steps.test.outcome || 'skipped' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Build | ${{ steps.build.outcome || 'skipped' }} |" >> $GITHUB_STEP_SUMMARY
