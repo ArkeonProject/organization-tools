@@ -138,6 +138,7 @@ Workflows are updated centrally in this repository. All repos using them receive
 
 - [Architecture](docs/ARCHITECTURE.md) - System architecture and design
 - [Developer Guide](docs/DEVELOPER_GUIDE.md) - Development workflows
+- [Release Guide](docs/RELEASE_GUIDE.md) - How to create releases
 - [Contributing](CONTRIBUTING.md) - Contribution guidelines
 
 ## ❓ FAQ
