@@ -1,0 +1,41 @@
+name: Reusable CD — Node → Vercel
+
+on:
+  workflow_call:
+    inputs:
+      vercel_project_id:
+        type: string
+        required: true
+      vercel_org_id:
+        type: string
+        required: true
+    secrets:
+      vercel_token:
+        required: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install PNPM
+        run: npm install -g pnpm@10 --force
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm run build
+
+      - name: Deploy to Vercel
+        run: |
+          npx vercel deploy --prod \
+            --token "${{ secrets.vercel_token }}" \
+            --scope "${{ inputs.vercel_org_id }}" \
+            --project "${{ inputs.vercel_project_id }}"
