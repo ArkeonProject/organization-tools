@@ -1,0 +1,158 @@
+# .github/workflows/reusable/cd-python-docker.yml
+# Reusable workflow for building and publishing Python Docker images
+
+name: 🐳 CD - Python Docker
+
+on:
+  workflow_call:
+    inputs:
+      image-name:
+        description: 'Docker image name (without registry)'
+        required: true
+        type: string
+      
+      dockerfile-path:
+        description: 'Path to Dockerfile'
+        required: false
+        type: string
+        default: './Dockerfile'
+      
+      context-path:
+        description: 'Docker build context path'
+        required: false
+        type: string
+        default: '.'
+      
+      platforms:
+        description: 'Target platforms (comma-separated)'
+        required: false
+        type: string
+        default: 'linux/amd64,linux/arm64'
+      
+      push-to-ghcr:
+        description: 'Push to GitHub Container Registry'
+        required: false
+        type: boolean
+        default: true
+      
+      push-to-dockerhub:
+        description: 'Push to Docker Hub'
+        required: false
+        type: boolean
+        default: false
+      
+      run-tests:
+        description: 'Run tests before building'
+        required: false
+        type: boolean
+        default: true
+      
+      create-latest-tag:
+        description: 'Create latest tag'
+        required: false
+        type: boolean
+        default: true
+    
+    secrets:
+      DOCKERHUB_USERNAME:
+        description: 'Docker Hub username'
+        required: false
+      
+      DOCKERHUB_TOKEN:
+        description: 'Docker Hub token'
+        required: false
+      
+      GHCR_TOKEN:
+        description: 'GitHub Container Registry token'
+        required: false
+
+jobs:
+  build-and-push:
+    name: Build & Push Docker Image
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    
+    permissions:
+      contents: read
+      packages: write
+    
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: 🐍 Setup Python
+        if: inputs.run-tests
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      
+      - name: 🧪 Run tests
+        if: inputs.run-tests
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements-dev.txt ]; then
+            pip install -r requirements-dev.txt
+          elif [ -f requirements.txt ]; then
+            pip install -r requirements.txt
+          fi
+          pip install pytest
+          pytest --maxfail=1 --disable-warnings -v || true
+      
+      - name: 🐳 Set up QEMU
+        uses: docker/setup-qemu-action@v3
+      
+      - name: 🐳 Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: 🔐 Login to GHCR
+        if: inputs.push-to-ghcr
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GHCR_TOKEN || secrets.GITHUB_TOKEN }}
+      
+      - name: 🔐 Login to Docker Hub
+        if: inputs.push-to-dockerhub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      
+      - name: 🏷️ Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            ${{ inputs.push-to-ghcr && format('ghcr.io/{0}/{1}', github.repository_owner, inputs.image-name) || '' }}
+            ${{ inputs.push-to-dockerhub && format('{0}/{1}', secrets.DOCKERHUB_USERNAME, inputs.image-name) || '' }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' && inputs.create-latest-tag }}
+      
+      - name: 🔨 Build and push
+        id: build
+        uses: docker/build-push-action@v5
+        with:
+          context: ${{ inputs.context-path }}
+          file: ${{ inputs.dockerfile-path }}
+          platforms: ${{ inputs.platforms }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      
+      - name: 📋 Summary
+        run: |
+          echo "## 🐳 Docker Build" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Image | ${{ inputs.image-name }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Digest | ${{ steps.build.outputs.digest }} |" >> $GITHUB_STEP_SUMMARY

@@ -1,0 +1,137 @@
+# .github/workflows/reusable/cd-node-vercel.yml
+# Reusable workflow for deploying Node.js apps to Vercel
+
+name: 🚀 CD - Node.js to Vercel
+
+on:
+  workflow_call:
+    inputs:
+      node-version:
+        description: 'Node.js version'
+        required: false
+        type: string
+        default: '20'
+      
+      package-manager:
+        description: 'Package manager (pnpm, npm, yarn, bun)'
+        required: false
+        type: string
+        default: 'pnpm'
+      
+      working-directory:
+        description: 'Working directory'
+        required: false
+        type: string
+        default: '.'
+      
+      environment:
+        description: 'Deployment environment (production, preview, staging)'
+        required: false
+        type: string
+        default: 'production'
+      
+      build-command:
+        description: 'Build command override'
+        required: false
+        type: string
+        default: 'build'
+      
+      create-github-deployment:
+        description: 'Create GitHub deployment'
+        required: false
+        type: boolean
+        default: true
+    
+    secrets:
+      VERCEL_TOKEN:
+        description: 'Vercel deployment token'
+        required: true
+      
+      VERCEL_ORG_ID:
+        description: 'Vercel organization ID'
+        required: true
+      
+      VERCEL_PROJECT_ID:
+        description: 'Vercel project ID'
+        required: true
+      
+      ENV_VARS:
+        description: 'Environment variables as JSON'
+        required: false
+    
+    outputs:
+      deployment-url:
+        description: 'Deployment URL'
+        value: ${{ jobs.deploy.outputs.url }}
+
+jobs:
+  deploy:
+    name: Deploy to Vercel
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    
+    environment:
+      name: ${{ inputs.environment }}
+      url: ${{ steps.deploy.outputs.url }}
+    
+    outputs:
+      url: ${{ steps.deploy.outputs.url }}
+    
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
+    
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: 📦 Setup pnpm
+        if: inputs.package-manager == 'pnpm'
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9
+      
+      - name: 🧰 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.node-version }}
+          cache: ${{ inputs.package-manager }}
+      
+      - name: 📦 Install dependencies (pnpm)
+        if: inputs.package-manager == 'pnpm'
+        run: pnpm install --frozen-lockfile
+      
+      - name: 📦 Install dependencies (npm)
+        if: inputs.package-manager == 'npm'
+        run: npm ci
+      
+      - name: 🧱 Build application
+        run: |
+          if [ -n "${{ secrets.ENV_VARS }}" ]; then
+            echo "${{ secrets.ENV_VARS }}" | jq -r 'to_entries|map("\(.key)=\(.value|tostring)")|.[]' >> $GITHUB_ENV
+          fi
+          
+          if [ "${{ inputs.package-manager }}" = "bun" ]; then
+            bun run ${{ inputs.build-command }}
+          else
+            ${{ inputs.package-manager }} run ${{ inputs.build-command }}
+          fi
+      
+      - name: 🚀 Deploy to Vercel
+        id: deploy
+        uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          vercel-args: ${{ inputs.environment == 'production' && '--prod' || '' }}
+          working-directory: ${{ inputs.working-directory }}
+      
+      - name: 📋 Deployment Summary
+        run: |
+          echo "## 🚀 Deployment Successful" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Environment | ${{ inputs.environment }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| URL | ${{ steps.deploy.outputs.url }} |" >> $GITHUB_STEP_SUMMARY

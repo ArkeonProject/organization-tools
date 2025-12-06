@@ -1,0 +1,56 @@
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+### Added
+- New composite action `setup-bun` for Bun runtime setup
+- New composite action `setup-docker` for Docker buildx with multi-platform support
+- Enhanced `setup-repo.sh` with dry-run mode (`--dry-run`)
+- Enhanced `setup-repo.sh` with interactive mode (`--interactive`)
+- Enhanced `setup-repo.sh` with validation mode (`--validate`)
+- New `validate-workflows.sh` script for YAML validation
+- Comprehensive FAQ section in README
+- Troubleshooting section in README
+- CONTRIBUTING.md with detailed contribution guidelines
+- CHANGELOG.md for version tracking
+
+### Changed
+- Consolidated all templates into `.github/workflows/templates/`
+- Enhanced README with better structure and examples
+- Improved CODEOWNERS with more granular ownership
+- Updated setup-repo.sh with colored output and better error handling
+
+### Fixed
+- Fixed missing step IDs (`lint`, `typecheck`) in `ci-node.yml` that were referenced in job summary
+
+### Removed
+- Duplicate workflow files from `.github/workflows/` (kept only reusable versions)
+- Redundant `ci-templates/` directory (merged into templates)
+- Obsolete `setup-ci.sh` script (superseded by enhanced setup-repo.sh)
+- Empty `.github/workflows/internal/` directory
+- Empty `.github/actions/docker-login/` directory
+- Empty `.github/actions/semantic-version/` directory
+- Empty `.github/ISSUE_TEMPLATE/` directory
+- Empty `config/templates/` directory and parent `config/` directory
+- Temporary `SETUP_COMPLETE.md` file
+
+## [1.0.0] - Initial Release
+
+### Added
+- Reusable workflows for Node.js and Python CI/CD
+- Templates for quick repository setup
+- Composite actions for Node.js and Python setup
+- Basic setup script for repository initialization
+- Documentation (README, ARCHITECTURE, DEVELOPER_GUIDE)
+- Branch protection configuration script
+- Dependabot configuration
+
+---
+
+[Unreleased]: https://github.com/ArkeonProject/organization-tools/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/ArkeonProject/organization-tools/releases/tag/v1.0.0

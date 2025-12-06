@@ -1,0 +1,107 @@
+# .github/workflows/reusable/hotfix-create.yml
+# Reusable workflow for creating hotfix branches
+
+name: 🚨 Create Hotfix
+
+on:
+  workflow_call:
+    inputs:
+      description:
+        description: 'Hotfix description'
+        required: true
+        type: string
+      
+      issue-number:
+        description: 'Related issue number'
+        required: false
+        type: string
+        default: ''
+      
+      project-type:
+        description: 'Project type (node, python)'
+        required: true
+        type: string
+
+jobs:
+  create-hotfix:
+    name: Create Hotfix
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: write
+      pull-requests: write
+    
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      
+      - name: ⚙️ Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+      
+      - name: 📌 Get version (Node)
+        if: inputs.project-type == 'node'
+        id: version-node
+        run: echo "current=$(jq -r .version package.json)" >> $GITHUB_OUTPUT
+      
+      - name: 📌 Get version (Python)
+        if: inputs.project-type == 'python'
+        id: version-python
+        run: |
+          VERSION=$(grep -E '^version = ' pyproject.toml | sed 's/version = "\(.*\)"/\1/')
+          echo "current=$VERSION" >> $GITHUB_OUTPUT
+      
+      - name: 🔢 Bump patch
+        id: bump
+        run: |
+          CURRENT="${{ steps.version-node.outputs.current || steps.version-python.outputs.current }}"
+          IFS='.' read -ra V <<< "$CURRENT"
+          PATCH=$((V[2] + 1))
+          NEW="${V[0]}.${V[1]}.$PATCH"
+          echo "version=$NEW" >> $GITHUB_OUTPUT
+      
+      - name: 🌿 Create hotfix branch
+        id: branch
+        run: |
+          BRANCH="hotfix/v${{ steps.bump.outputs.version }}"
+          git checkout -b "$BRANCH"
+          echo "branch=$BRANCH" >> $GITHUB_OUTPUT
+      
+      - name: 📝 Update version (Node)
+        if: inputs.project-type == 'node'
+        run: |
+          npm version ${{ steps.bump.outputs.version }} --no-git-tag-version
+          git add package.json
+      
+      - name: 📝 Update version (Python)
+        if: inputs.project-type == 'python'
+        run: |
+          NEW="${{ steps.bump.outputs.version }}"
+          sed -i "s/^version = .*/version = \"$NEW\"/" pyproject.toml
+          git add pyproject.toml
+      
+      - name: 💾 Commit and push
+        run: |
+          git commit -m "chore(hotfix): bump to ${{ steps.bump.outputs.version }}"
+          git push origin ${{ steps.branch.outputs.branch }}
+      
+      - name: 🔀 Create PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.pulls.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `🚨 Hotfix v${{ steps.bump.outputs.version }}: ${{ inputs.description }}`,
+              head: '${{ steps.branch.outputs.branch }}',
+              base: 'main',
+              body: `## Hotfix v${{ steps.bump.outputs.version }}
+            
+            ${{ inputs.description }}
+            
+            ${{ inputs.issue-number && format('Fixes #{0}', inputs.issue-number) || '' }}`
+            });

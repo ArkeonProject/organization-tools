@@ -1,0 +1,216 @@
+# .github/workflows/reusable/ci-node.yml
+# Reusable workflow for Node.js CI (Vite, React, Next.js, etc.)
+
+name: 🔷 CI - Node.js
+
+on:
+  workflow_call:
+    inputs:
+      node-version:
+        description: 'Node.js version'
+        required: false
+        type: string
+        default: '20'
+      
+      package-manager:
+        description: 'Package manager (pnpm, npm, yarn, bun)'
+        required: false
+        type: string
+        default: 'pnpm'
+      
+      working-directory:
+        description: 'Working directory for monorepo support'
+        required: false
+        type: string
+        default: '.'
+      
+      run-lint:
+        description: 'Run linting'
+        required: false
+        type: boolean
+        default: true
+      
+      run-typecheck:
+        description: 'Run type checking'
+        required: false
+        type: boolean
+        default: true
+      
+      run-tests:
+        description: 'Run tests'
+        required: false
+        type: boolean
+        default: true
+      
+      run-build:
+        description: 'Run build'
+        required: false
+        type: boolean
+        default: true
+      
+      build-command:
+        description: 'Custom build command'
+        required: false
+        type: string
+        default: 'build'
+      
+      test-command:
+        description: 'Custom test command'
+        required: false
+        type: string
+        default: 'test'
+      
+      upload-coverage:
+        description: 'Upload test coverage'
+        required: false
+        type: boolean
+        default: false
+      
+      upload-artifacts:
+        description: 'Upload build artifacts'
+        required: false
+        type: boolean
+        default: false
+
+    outputs:
+      build-success:
+        description: 'Build completed successfully'
+        value: ${{ jobs.ci.outputs.build-success }}
+      
+      artifact-name:
+        description: 'Name of uploaded artifact'
+        value: ${{ jobs.ci.outputs.artifact-name }}
+
+jobs:
+  ci:
+    name: CI Pipeline
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    
+    outputs:
+      build-success: ${{ steps.build.outcome == 'success' }}
+      artifact-name: ${{ steps.artifact.outputs.name }}
+    
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
+    
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: 📦 Setup pnpm
+        if: inputs.package-manager == 'pnpm'
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9
+      
+      - name: 🧰 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.node-version }}
+          cache: ${{ inputs.package-manager }}
+          cache-dependency-path: ${{ inputs.working-directory }}/pnpm-lock.yaml
+      
+      - name: 📦 Setup bun
+        if: inputs.package-manager == 'bun'
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+      
+      - name: 📦 Install dependencies (pnpm)
+        if: inputs.package-manager == 'pnpm'
+        run: pnpm install --frozen-lockfile
+      
+      - name: 📦 Install dependencies (npm)
+        if: inputs.package-manager == 'npm'
+        run: npm ci
+      
+      - name: 📦 Install dependencies (yarn)
+        if: inputs.package-manager == 'yarn'
+        run: yarn install --frozen-lockfile
+      
+      - name: 📦 Install dependencies (bun)
+        if: inputs.package-manager == 'bun'
+        run: bun install --frozen-lockfile
+      
+      - name: 🔍 Run linting
+        id: lint
+        if: inputs.run-lint
+        run: |
+          if [ "${{ inputs.package-manager }}" = "bun" ]; then
+            bun run lint
+          else
+            ${{ inputs.package-manager }} run lint
+          fi
+        continue-on-error: false
+      
+      - name: 🔍 Run type checking
+        id: typecheck
+        if: inputs.run-typecheck
+        run: |
+          if [ "${{ inputs.package-manager }}" = "bun" ]; then
+            bun run typecheck || bun run tsc --noEmit
+          else
+            ${{ inputs.package-manager }} run typecheck || ${{ inputs.package-manager }} run tsc --noEmit
+          fi
+        continue-on-error: false
+      
+      - name: 🧪 Run tests
+        id: test
+        if: inputs.run-tests
+        run: |
+          if [ "${{ inputs.package-manager }}" = "bun" ]; then
+            bun run ${{ inputs.test-command }}
+          else
+            ${{ inputs.package-manager }} run ${{ inputs.test-command }}
+          fi
+        continue-on-error: false
+      
+      - name: 📊 Upload coverage reports
+        if: inputs.upload-coverage && steps.test.outcome == 'success'
+        uses: codecov/codecov-action@v4
+        with:
+          working-directory: ${{ inputs.working-directory }}
+          files: ./coverage/lcov.info
+          flags: unittests
+          fail_ci_if_error: false
+      
+      - name: 🧱 Build application
+        id: build
+        if: inputs.run-build
+        run: |
+          if [ "${{ inputs.package-manager }}" = "bun" ]; then
+            bun run ${{ inputs.build-command }}
+          else
+            ${{ inputs.package-manager }} run ${{ inputs.build-command }}
+          fi
+        continue-on-error: false
+      
+      - name: 📦 Upload build artifacts
+        id: artifact
+        if: inputs.upload-artifacts && steps.build.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-${{ github.sha }}
+          path: |
+            ${{ inputs.working-directory }}/dist
+            ${{ inputs.working-directory }}/build
+            ${{ inputs.working-directory }}/.next
+            ${{ inputs.working-directory }}/out
+          retention-days: 7
+          if-no-files-found: warn
+      
+      - name: 📋 Job Summary
+        if: always()
+        run: |
+          echo "## 🔷 CI Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Check | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Lint | ${{ steps.lint.outcome || 'skipped' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Type Check | ${{ steps.typecheck.outcome || 'skipped' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Tests | ${{ steps.test.outcome || 'skipped' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Build | ${{ steps.build.outcome || 'skipped' }} |" >> $GITHUB_STEP_SUMMARY

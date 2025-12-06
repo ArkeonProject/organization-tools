@@ -1,0 +1,21 @@
+name: CI
+
+on:
+  push:
+    branches: [develop]
+  pull_request:
+    branches: [develop, main]
+
+jobs:
+  ci:
+    name: Continuous Integration
+    uses: ArkeonProject/organization-tools/.github/workflows/reusable/ci-node.yml@main
+    with:
+      node-version: '20'
+      package-manager: 'pnpm'
+      run-lint: true
+      run-typecheck: true
+      run-tests: true
+      run-build: true
+      upload-coverage: true
+      upload-artifacts: true
