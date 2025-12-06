@@ -1,0 +1,21 @@
+name: 'Setup Bun'
+description: 'Setup Bun runtime with caching'
+
+inputs:
+  bun-version:
+    description: 'Bun version'
+    required: false
+    default: 'latest'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: 🥟 Setup Bun
+      uses: oven-sh/setup-bun@v1
+      with:
+        bun-version: ${{ inputs.bun-version }}
+    
+    - name: 📊 Versions
+      shell: bash
+      run: |
+        echo "Bun: $(bun --version)"

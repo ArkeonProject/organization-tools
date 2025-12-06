@@ -1,0 +1,12 @@
+# Default owners
+* @ArkeonProject/maintainers
+
+# CI/CD workflows require DevOps approval
+/.github/workflows/ @ArkeonProject/devops @daviilpzDev
+/.github/actions/ @ArkeonProject/devops @daviilpzDev
+
+# Scripts require review
+/scripts/ @ArkeonProject/devops @daviilpzDev
+
+# Documentation
+/docs/ @ArkeonProject/maintainers @daviilpzDev
