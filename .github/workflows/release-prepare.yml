@@ -127,7 +127,7 @@ jobs:
           git push origin ${{ steps.create-branch.outputs.branch }}
       
       - name: 🔀 Create PR
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const { data: pr } = await github.rest.pulls.create({
