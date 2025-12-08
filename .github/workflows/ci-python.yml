@@ -172,7 +172,7 @@ jobs:
       
       - name: 📊 Upload coverage to Codecov
         if: inputs.upload-coverage && steps.test.outcome == 'success'
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
         with:
           working-directory: ${{ inputs.working-directory }}
           files: ./coverage.xml
