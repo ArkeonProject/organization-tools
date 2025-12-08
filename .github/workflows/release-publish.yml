@@ -72,7 +72,7 @@ jobs:
       
       - name: 🎉 Create GitHub Release
         if: inputs.create-github-release
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const tag = '${{ steps.tag.outputs.tag }}';
