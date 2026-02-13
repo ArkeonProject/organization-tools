@@ -57,6 +57,13 @@ jobs:
           ref: ${{ inputs.base-branch }}
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 🟢 Setup Node.js
+        if: inputs.project-type == 'node'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
       
       - name: ⚙️ Configure Git
         run: |
