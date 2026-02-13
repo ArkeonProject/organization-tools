@@ -10,6 +10,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [1.1.1]: https://github.com/ArkeonProject/organization-tools/releases/tag/v1.1.1
 [1.1.0]: https://github.com/ArkeonProject/organization-tools/releases/tag/v1.1.0
 
+## [Unreleased]
+
+### Fixed
+- `release-prepare.yml`: Added missing `actions/setup-node` step to fix `npm: command not found` error.
+
 ## [1.1.2] - 2026-02-13
 
 ### Changed
