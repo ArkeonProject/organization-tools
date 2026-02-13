@@ -1,0 +1,16 @@
+name: CD (Production)
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  deploy:
+    # Uses the unified Docker workflow in production mode
+    uses: ArkeonProject/organization-tools/.github/workflows/reusable-docker-build.yml@v1.1.0
+    with:
+      image_name: ${{ github.repository }}/web
+      mode: 'production'
+      dockerfile_path: './apps/web/Dockerfile'
+    secrets:
+      PORTAINER_WEBHOOK: ${{ secrets.PORTAINER_WEBHOOK_WEB }}

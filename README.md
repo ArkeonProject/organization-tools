@@ -6,19 +6,33 @@
 
 This repository contains all the workflows, templates, composite actions, and scripts necessary to implement consistent CI/CD across the organization.
 
+## 🏗️ Infrastructure ("Zero-Waste" Architecture)
+
+This organization uses a **Self-Hosted Runner** optimized for Intel N100 hardware to minimize resource usage ("Zero-Waste").
+
+- **Runner Tag**: `[self-hosted, n100]`
+- **Docker Strategy**: Docker-out-of-Docker (DooD) via `/var/run/docker.sock`
+- **Resource Limits**: 3GB RAM Soft Limit (enforced via Portainer Stack)
+- **Documentation**: See [contracts/infrastructure/portainer/runner-stack.yml](docs/infrastructure/portainer/runner-stack.yml) for setup.
+
 ## 📦 Contents
 
 ### Reusable Workflows (`.github/workflows/`)
+- `reusable-deploy.yml` - **[NEW]** Universal deploy with fail-safe testing (Hurl/Playwright)
+- `reusable-docker-build.yml` - **[NEW]** Unified Docker build & push (Production/Milestone modes)
+- `check-runner.yml` - **[NEW]** Diagnostic tool for self-hosted runner health
 - `ci-node.yml` - CI for Node.js projects (supports pnpm, npm, yarn, bun)
 - `ci-python.yml` - CI for Python projects
 - `cd-node-vercel.yml` - Deploy Node.js to Vercel
-- `cd-python-docker.yml` - Build and push Docker images for Python
+- `cd-python-docker.yml` - (Legacy) Build and push Docker images for Python
 - `release-prepare.yml` - Prepare releases
 - `release-publish.yml` - Publish releases
 - `hotfix-create.yml` - Create hotfixes
 
 ### Templates (`.github/workflows/templates/`)
 Ready-to-copy templates for new repositories:
+- `cd-production.template.yml` - **[NEW]** Production CD using Docker
+- `cd-test.template.yml` - **[NEW]** Test CD with automatic milestone tagging
 - `node-ci.template.yml` - Node.js CI template
 - `node-cd.template.yml` - Node.js CD template
 - `python-ci.template.yml` - Python CI template

@@ -67,7 +67,7 @@ on:
 jobs:
   deploy:
     name: Deploy to Vercel
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, n100]
     timeout-minutes: 15
     
     # Note: steps.deploy.outputs.url is resolved at job completion time
@@ -85,7 +85,7 @@ jobs:
     
     steps:
       - name: 📥 Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       
       - name: 📦 Setup pnpm
         if: inputs.package-manager == 'pnpm'

@@ -25,7 +25,7 @@ on:
 jobs:
   create-hotfix:
     name: Create Hotfix
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, n100]
     
     permissions:
       contents: write
@@ -33,7 +33,7 @@ jobs:
     
     steps:
       - name: 📥 Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: main
           fetch-depth: 0
