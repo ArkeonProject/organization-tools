@@ -1,4 +1,4 @@
-name: Reusable CD Test
+name: Reusable Docker Build
 
 on:
   workflow_call:
@@ -10,21 +10,29 @@ on:
       dockerfile_path:
         description: 'Path to Dockerfile'
         required: false
-        default: './apps/web/Dockerfile'
+        default: './Dockerfile'
         type: string
       context:
         description: 'Docker build context'
         required: false
         default: '.'
         type: string
-      branch:
-        description: 'Branch to build from'
+      mode:
+        description: 'Build mode: "production" or "milestone"'
         required: false
-        default: 'develop'
+        default: 'production'
         type: string
+      branch:
+        description: 'Branch to checkout (useful for milestone mode)'
+        required: false
+        default: ''
+        type: string
+    secrets:
+      PORTAINER_WEBHOOK:
+        required: false
 
 jobs:
-  build-test:
+  build-and-push:
     runs-on: [self-hosted, n100]
     permissions:
       contents: read
@@ -36,16 +44,17 @@ jobs:
         with:
           ref: ${{ inputs.branch }}
 
+      # --- TAGGING LOGIC: MILESTONE ---
       - name: Generate milestone tag
-        id: version
+        if: inputs.mode == 'milestone'
+        id: tags-milestone
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           # Lowercase image name
           IMAGE_NAME=$(echo "${{ inputs.image_name }}" | tr '[:upper:]' '[:lower:]')
-          echo "image_name=${IMAGE_NAME}" >> $GITHUB_OUTPUT
-
-          # Read base version from package.json
+          
+          # Read base version
           if [ -f "package.json" ]; then
             BASE_VERSION=$(node -p "require('./package.json').version")
           else
@@ -53,10 +62,8 @@ jobs:
             BASE_VERSION="0.0.0"
           fi
 
-          # Query existing tags from GHCR
+          # Query existing tags
           OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
-          # Note: This API call might need adjustment depending on actual repo visibility/permissions
-          # Using a simplified approach for demonstration or assuming permissions are correct
           LAST_MILESTONE=$(gh api \
             "/orgs/${OWNER}/packages/container/$(basename ${{ inputs.image_name }})/versions" \
             --paginate --jq '.[].metadata.container.tags[]' 2>/dev/null \
@@ -74,11 +81,28 @@ jobs:
           MILESTONE=$(printf "%02d" $NEXT)
           TAG="${BASE_VERSION}-M.${MILESTONE}"
 
-          echo "tag=${TAG}" >> $GITHUB_OUTPUT
+          # Output formatted tags
+          echo "tags<<EOF" >> $GITHUB_OUTPUT
+          echo "ghcr.io/${IMAGE_NAME}:${TAG}" >> $GITHUB_OUTPUT
+          echo "ghcr.io/${IMAGE_NAME}:test-latest" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+          
+          # Output metadata for summary
+          echo "version=${TAG}" >> $GITHUB_OUTPUT
           echo "base=${BASE_VERSION}" >> $GITHUB_OUTPUT
-          echo "milestone=M.${MILESTONE}" >> $GITHUB_OUTPUT
-          echo "📦 Milestone: ${TAG}"
 
+      # --- TAGGING LOGIC: PRODUCTION ---
+      - name: Extract metadata (Production)
+        if: inputs.mode == 'production'
+        id: tags-production
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ inputs.image_name }}
+          tags: |
+            type=sha,prefix=
+            type=raw,value=latest
+
+      # --- BUILD ---
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -95,17 +119,27 @@ jobs:
           context: ${{ inputs.context }}
           file: ${{ inputs.dockerfile_path }}
           push: true
-          tags: |
-            ghcr.io/${{ steps.version.outputs.image_name }}:${{ steps.version.outputs.tag }}
-            ghcr.io/${{ steps.version.outputs.image_name }}:test-latest
+          # Select tags based on mode
+          tags: ${{ inputs.mode == 'milestone' && steps.tags-milestone.outputs.tags || steps.tags-production.outputs.tags }}
+          labels: ${{ inputs.mode == 'production' && steps.tags-production.outputs.labels || '' }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      # --- CRITICAL: RELEASE RESOURCES ---
+      # Explicitly prune build cache if disk space is tight on N100?
+      # Docker Buildx handles this reasonable well, but 'docker system prune' might be needed periodically.
+      # For now, relying on 'cache-to: max' rotation.
+
+      # --- NOTIFICATIONS ---
+      - name: Trigger Portainer Webhook
+        if: inputs.mode == 'production' && secrets.PORTAINER_WEBHOOK != ''
+        run: |
+          curl -X POST "${{ secrets.PORTAINER_WEBHOOK }}" || echo "Webhook failed"
+
       - name: Summary
         run: |
-          echo "## 🧪 Test Milestone Deployment" >> $GITHUB_STEP_SUMMARY
+          echo "## 🐳 Docker Build Summary" >> $GITHUB_STEP_SUMMARY
           echo "| Detail | Value |" >> $GITHUB_STEP_SUMMARY
           echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
-          echo "| **Branch** | \`${{ inputs.branch }}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| **Version** | \`${{ steps.version.outputs.base }}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| **Tag** | \`${{ steps.version.outputs.tag }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Mode** | \`${{ inputs.mode }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Image** | \`ghcr.io/${{ inputs.image_name }}\` |" >> $GITHUB_STEP_SUMMARY

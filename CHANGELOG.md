@@ -78,5 +78,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-[Unreleased]: https://github.com/ArkeonProject/organization-tools/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/ArkeonProject/organization-tools/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/ArkeonProject/organization-tools/releases/tag/v1.1.0
 [1.0.0]: https://github.com/ArkeonProject/organization-tools/releases/tag/v1.0.0
+
+## [1.1.0] - 2026-02-13
+
+### Changed
+- **Infrastructure**: Migrated all workflows to use self-hosted runner `[self-hosted, n100]` for "Zero-Waste" architecture.
+- **Portainer**: Added `runner-stack.yml` configuration with `RUNNER_SCOPE: org` and resource limits.
+- **Diagnostics**: Added `check-runner.yml` to verify self-hosted runner health.
+- **Deployment**: Added `reusable-deploy.yml` with fail-safe testing logic (Hurl/Playwright).
+- **Docker**: Added `reusable-docker-build.yml` unified workflow for Production and Test builds with automatic tagging.
+
+### Added
+- `templates/cd-production.template.yml`: Template for production CD using the unified Docker workflow.
+- `templates/cd-test.template.yml`: Template for test CD with milestone tagging.
