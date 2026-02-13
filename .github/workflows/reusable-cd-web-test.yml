@@ -1,0 +1,111 @@
+name: Reusable CD Test
+
+on:
+  workflow_call:
+    inputs:
+      image_name:
+        description: 'Image name (e.g. owner/repo/web)'
+        required: true
+        type: string
+      dockerfile_path:
+        description: 'Path to Dockerfile'
+        required: false
+        default: './apps/web/Dockerfile'
+        type: string
+      context:
+        description: 'Docker build context'
+        required: false
+        default: '.'
+        type: string
+      branch:
+        description: 'Branch to build from'
+        required: false
+        default: 'develop'
+        type: string
+
+jobs:
+  build-test:
+    runs-on: [self-hosted, n100]
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch }}
+
+      - name: Generate milestone tag
+        id: version
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Lowercase image name
+          IMAGE_NAME=$(echo "${{ inputs.image_name }}" | tr '[:upper:]' '[:lower:]')
+          echo "image_name=${IMAGE_NAME}" >> $GITHUB_OUTPUT
+
+          # Read base version from package.json
+          if [ -f "package.json" ]; then
+            BASE_VERSION=$(node -p "require('./package.json').version")
+          else
+            echo "package.json not found, defaulting to 0.0.0"
+            BASE_VERSION="0.0.0"
+          fi
+
+          # Query existing tags from GHCR
+          OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          # Note: This API call might need adjustment depending on actual repo visibility/permissions
+          # Using a simplified approach for demonstration or assuming permissions are correct
+          LAST_MILESTONE=$(gh api \
+            "/orgs/${OWNER}/packages/container/$(basename ${{ inputs.image_name }})/versions" \
+            --paginate --jq '.[].metadata.container.tags[]' 2>/dev/null \
+            | grep -E "^${BASE_VERSION}-M\.[0-9]+$" \
+            | sed "s/${BASE_VERSION}-M\.//" \
+            | sort -n \
+            | tail -1)
+
+          if [ -z "$LAST_MILESTONE" ]; then
+            NEXT=1
+          else
+            NEXT=$((LAST_MILESTONE + 1))
+          fi
+
+          MILESTONE=$(printf "%02d" $NEXT)
+          TAG="${BASE_VERSION}-M.${MILESTONE}"
+
+          echo "tag=${TAG}" >> $GITHUB_OUTPUT
+          echo "base=${BASE_VERSION}" >> $GITHUB_OUTPUT
+          echo "milestone=M.${MILESTONE}" >> $GITHUB_OUTPUT
+          echo "📦 Milestone: ${TAG}"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ inputs.context }}
+          file: ${{ inputs.dockerfile_path }}
+          push: true
+          tags: |
+            ghcr.io/${{ steps.version.outputs.image_name }}:${{ steps.version.outputs.tag }}
+            ghcr.io/${{ steps.version.outputs.image_name }}:test-latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Summary
+        run: |
+          echo "## 🧪 Test Milestone Deployment" >> $GITHUB_STEP_SUMMARY
+          echo "| Detail | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| **Branch** | \`${{ inputs.branch }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Version** | \`${{ steps.version.outputs.base }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Tag** | \`${{ steps.version.outputs.tag }}\` |" >> $GITHUB_STEP_SUMMARY
