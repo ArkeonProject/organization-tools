@@ -132,9 +132,15 @@ jobs:
 
       # --- NOTIFICATIONS ---
       - name: Trigger Portainer Webhook
-        if: inputs.mode == 'production' && secrets.PORTAINER_WEBHOOK != ''
+        if: inputs.mode == 'production'
+        env:
+          WEBHOOK_URL: ${{ secrets.PORTAINER_WEBHOOK }}
         run: |
-          curl -X POST "${{ secrets.PORTAINER_WEBHOOK }}" || echo "Webhook failed"
+          if [ -n "$WEBHOOK_URL" ]; then
+            curl -X POST "$WEBHOOK_URL" || echo "Webhook failed"
+          else
+            echo "No webhook secret provided, skipping."
+          fi
 
       - name: Summary
         run: |
