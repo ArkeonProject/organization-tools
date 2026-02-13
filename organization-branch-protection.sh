@@ -90,7 +90,7 @@ EOF
     "required_approving_review_count": 0
   },
   "required_conversation_resolution": true,
-  "required_linear_history": true,
+  "required_linear_history": false,
   "allow_force_pushes": false,
   "allow_deletions": false,
   "restrictions": {
@@ -113,7 +113,17 @@ EOF
 done
 
 echo ""
-echo "Configuración aplicada en TODOS los repos."
-echo "develop NUNCA quedará behind"
-echo "develop permite force push pero SOLO tú puedes push"
-echo "main queda protegida como entorno productivo"
+echo "========================================================================="
+echo "✅ Configuración aplicada en TODOS los repos."
+echo "========================================================================="
+echo ""
+echo "📌 Configuración aplicada:"
+echo "   • Linear history: DESACTIVADO en ambas ramas"
+echo "   • Permite merge commits y auto-back-merge automático"
+echo "   • develop permite force push pero SOLO tú puedes push"
+echo "   • main protegida como entorno productivo"
+echo ""
+echo "💡 Beneficios:"
+echo "   • Historial completo de features preservado"
+echo "   • Auto-back-merge funciona correctamente"
+echo "   • develop NUNCA quedará behind después de un release"

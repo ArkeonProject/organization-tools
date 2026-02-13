@@ -1,0 +1,35 @@
+name: Diagnostic Runner Check
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 0 * * 0' # Weekly check
+
+jobs:
+  check-health:
+    runs-on: [self-hosted, n100]
+    timeout-minutes: 5 # Fail fast to save resources
+    
+    steps:
+      - name: Check Runner Identity
+        run: |
+          echo "User: $(whoami)"
+          echo "Hostname: $(hostname)"
+          echo "Runner Workspace: ${{ runner.workspace }}"
+
+      - name: Check Docker Access (DooD)
+        run: |
+          if ! docker info > /dev/null 2>&1; then
+            echo "::error::Cannot connect to Docker daemon. Check /var/run/docker.sock mapping."
+            exit 1
+          fi
+          echo "Docker is accessible."
+          docker info | grep -i "Server Version"
+
+      - name: Check Resource Usage (RAM/Disk)
+        run: |
+          echo "--- Memory ---"
+          free -h
+          echo ""
+          echo "--- Disk Space ---"
+          df -h /

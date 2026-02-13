@@ -1,0 +1,78 @@
+name: Master Reusable Deploy
+
+on:
+  workflow_call:
+    inputs:
+      service_name:
+        description: 'Name of the service to deploy'
+        required: true
+        type: string
+      port:
+        description: 'Service port'
+        required: true
+        type: string
+      run_tests:
+        description: 'Whether to run tests'
+        required: false
+        type: boolean
+        default: true
+
+jobs:
+  build-and-deploy:
+    runs-on: [self-hosted, n100]
+    timeout-minutes: 15 # Strict timeout to prevent zombie jobs on N100
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # --- FAIL-SAFE TESTING BLOCK ---
+      
+      - name: Run Hurl Tests (Fail-Safe)
+        if: inputs.run_tests
+        run: |
+          # Check for Hurl files recursively or in root
+          if find . -maxdepth 2 -name "*.hurl" | grep -q .; then
+            echo "Found Hurl tests. Executing..."
+            # Ensure hurl is available (download if missing, lightweight binary)
+            if ! command -v hurl &> /dev/null; then
+               echo "Hurl not found, downloading binary..."
+               # Direct binary download (faster, no sudo needed)
+               curl --location --remote-name https://github.com/Orange-OpenSource/hurl/releases/download/4.1.0/hurl-4.1.0-x86_64-linux.tar.gz
+               tar -xzf hurl-4.1.0-x86_64-linux.tar.gz
+               # Add to PATH temporarily
+               export PATH=$PATH:$(pwd)/hurl-4.1.0-x86_64-linux
+               chmod +x $(pwd)/hurl-4.1.0-x86_64-linux/hurl
+            fi
+            # Execute tests
+            hurl --test *.hurl || exit 1 # Fail if tests exist and fail
+          else
+            echo "0 tests (Hurl) - Proceeding"
+          fi
+
+      - name: Run Playwright Tests (Fail-Safe)
+        if: inputs.run_tests
+        run: |
+          # Check for Playwright config or e2e folder
+          if [ -f "playwright.config.ts" ] || [ -d "e2e" ]; then
+            echo "Found Playwright tests. Executing..."
+            # Using localized dependencies
+            npm ci
+            npx playwright install --with-deps chromium
+            # Limit workers to 2 for N100 stability
+            npx playwright test --workers=2 --reporter=dot
+          else
+            echo "0 tests (Playwright) - Proceeding"
+          fi
+
+      # --- DEPLOYMENT BLOCK ---
+      
+      - name: Deploy Service
+        env:
+          SERVICE_NAME: ${{ inputs.service_name }}
+          SERVICE_PORT: ${{ inputs.port }}
+        run: |
+          echo "Deploying $SERVICE_NAME on port $SERVICE_PORT..."
+          # Example deployment logic (replace with actual Docker commands)
+          # docker compose build && docker compose up -d
+          echo "Deployment simulated successfully."

@@ -70,6 +70,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     
+    # Note: steps.deploy.outputs.url is resolved at job completion time
+    # Static analysis warnings about context access are false positives
     environment:
       name: ${{ inputs.environment }}
       url: ${{ steps.deploy.outputs.url }}
