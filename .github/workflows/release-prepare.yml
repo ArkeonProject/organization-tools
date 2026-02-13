@@ -40,7 +40,7 @@ on:
 jobs:
   prepare:
     name: Prepare Release
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, n100]
     
     permissions:
       contents: write
