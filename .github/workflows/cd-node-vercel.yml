@@ -89,7 +89,7 @@ jobs:
       
       - name: 📦 Setup pnpm
         if: inputs.package-manager == 'pnpm'
-        uses: pnpm/action-setup@v3
+        uses: pnpm/action-setup@v5
         with:
           version: 9
       
