@@ -5,11 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]: https://github.com/ArkeonProject/organization-tools/compare/v1.1.3...HEAD
+## [Unreleased]: https://github.com/ArkeonProject/organization-tools/compare/v1.1.6...HEAD
+[1.1.6]: https://github.com/ArkeonProject/organization-tools/releases/tag/v1.1.6
+[1.1.5]: https://github.com/ArkeonProject/organization-tools/releases/tag/v1.1.5
+
+## [1.1.6] - 2026-04-19
+
+### Fixed
+- `cd-node-vercel.yml`: Reemplazado `amondnet/vercel-action@v25` (instala `vercel@25.1.0`) por `npx vercel@latest` directo — la API de Vercel ahora exige `>=47.2.2`.
+- `cd-node-vercel.yml`: Corregido `actions/checkout@v6` (no existe) → `@v4`.
+- `cd-node-vercel.yml`: Actualizado `pnpm/action-setup@v3` → `@v4`, eliminada version fija.
+[1.1.4]: https://github.com/ArkeonProject/organization-tools/releases/tag/v1.1.4
 [1.1.3]: https://github.com/ArkeonProject/organization-tools/releases/tag/v1.1.3
 [1.1.2]: https://github.com/ArkeonProject/organization-tools/releases/tag/v1.1.2
 [1.1.1]: https://github.com/ArkeonProject/organization-tools/releases/tag/v1.1.1
 [1.1.0]: https://github.com/ArkeonProject/organization-tools/releases/tag/v1.1.0
+
+## [1.1.5] - 2026-02-14
+
+### Fixed
+- `ci-python.yml`: Improved dependency installation logic to ensure the project package is installed (via `pip install -e .`) even when `requirements.txt` is present.
+
+## [1.1.4] - 2026-02-13
+
+### Fixed
+- `reusable-docker-build.yml`: Fixed `Unrecognized named-value: 'secrets'` error by moving secret check from `if` condition to `run` script.
 
 ## [1.1.3] - 2026-02-13
 

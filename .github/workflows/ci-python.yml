@@ -121,11 +121,17 @@ jobs:
         if: ${{ !inputs.use-poetry }}
         run: |
           python -m pip install --upgrade pip
+          # Check for requirements files
           if [ -f requirements-dev.txt ]; then
             pip install -r requirements-dev.txt
           elif [ -f requirements.txt ]; then
             pip install -r requirements.txt
-          elif [ -f pyproject.toml ]; then
+          fi
+          
+          # ALWAYS try to install the project itself if pyproject.toml exists
+          # This ensures the package is installed in editable mode for tests
+          if [ -f pyproject.toml ]; then
+            echo "Installing project in editable mode..."
             pip install -e ".[dev]" || pip install -e .
           fi
       

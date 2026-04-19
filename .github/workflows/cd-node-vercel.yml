@@ -85,13 +85,11 @@ jobs:
     
     steps:
       - name: 📥 Checkout repository
-        uses: actions/checkout@v6
-      
+        uses: actions/checkout@v4
+
       - name: 📦 Setup pnpm
         if: inputs.package-manager == 'pnpm'
-        uses: pnpm/action-setup@v3
-        with:
-          version: 9
+        uses: pnpm/action-setup@v4
       
       - name: 🧰 Setup Node.js
         uses: actions/setup-node@v4
@@ -121,13 +119,17 @@ jobs:
       
       - name: 🚀 Deploy to Vercel
         id: deploy
-        uses: amondnet/vercel-action@v25
-        with:
-          vercel-token: ${{ secrets.VERCEL_TOKEN }}
-          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-          vercel-args: ${{ inputs.environment == 'production' && '--prod' || '' }}
-          working-directory: ${{ inputs.working-directory }}
+        run: |
+          ARGS="${{ inputs.environment == 'production' && '--prod' || '' }}"
+          OUTPUT=$(npx vercel@latest $ARGS \
+            --token="${{ secrets.VERCEL_TOKEN }}" \
+            --yes 2>&1)
+          echo "$OUTPUT"
+          DEPLOY_URL=$(echo "$OUTPUT" | grep -oE 'https://[a-zA-Z0-9._-]+(\.vercel\.app)[^ ]*' | tail -1)
+          echo "url=$DEPLOY_URL" >> $GITHUB_OUTPUT
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
       
       - name: 📋 Deployment Summary
         run: |
