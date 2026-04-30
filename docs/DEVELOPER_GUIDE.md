@@ -83,26 +83,20 @@ This creates `hotfix/vX.X.X` branch from main.
 **Then**:
 
 ```bash
-# Checkout the created hotfix branch
+# Checkout the created hotfix branch (named after description)
 git fetch origin
-git checkout hotfix/v1.0.1
+git checkout hotfix/fix-authentication-bug
 
-# Implement the fix
-# ... fix the critical bug ...
-
-# Commit
+# Implement the fix using fix: commits
 git add .
 git commit -m "fix: critical bug in authentication"
 
 # Push
-git push origin hotfix/v1.0.1
-
-# Create PR to main
-gh pr create --base main --title "Hotfix v1.0.1: Fix authentication bug"
+git push origin hotfix/fix-authentication-bug
 ```
 
 After merge to main:
-- Automatically tagged and released
+- Automatically tagged as patch release (e.g. v1.2.1)
 
 ## Commit Conventions
 

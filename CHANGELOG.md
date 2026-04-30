@@ -5,9 +5,45 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]: https://github.com/ArkeonProject/organization-tools/compare/v1.1.6...HEAD
-[1.1.6]: https://github.com/ArkeonProject/organization-tools/releases/tag/v1.1.6
-[1.1.5]: https://github.com/ArkeonProject/organization-tools/releases/tag/v1.1.5
+## [Unreleased]
+
+### Fixed
+- `release.template.yml` and `hotfix.template.yml`: Pinned to `@v1.2.0` — templates still referenced `@v1.0.1`, which lacks auto-detection and git identity config.
+
+### Docs
+- `README.md`: Marked `release-prepare.yml` as deprecated.
+- `ARCHITECTURE.md`: Updated release workflow descriptions to reflect auto-publish model.
+- `DEVELOPER_GUIDE.md`: Updated hotfix example to use description-based branch names.
+
+---
+
+## [1.2.0] - 2026-04-30
+
+### Changed — Breaking (for workflow consumers)
+- **Trunk-Based Development**: Removed Gitflow strategy. `develop` branch no longer used.
+- **`release-publish.yml`**: Complete rewrite. Auto-detects version bump from conventional commits on every push to `main`:
+  - `feat:` → minor, `fix:`/`perf:` → patch, `feat!:`/`BREAKING CHANGE` → major
+  - `chore:`/`docs:`/`style:`/`refactor:` → no release
+  - No manual workflow dispatch needed
+- **`hotfix-create.yml`**: Removed manual version bump. Branch named after description (`hotfix/<slug>`). Auto-tagged as patch when merged via `fix:` commits.
+- **`release.template.yml`**: Simplified to single `push: main` trigger. No `prepare-release` job.
+- **`hotfix.template.yml`**: Removed `project-type` input (no longer needed).
+- **`node-ci.template.yml`** / **`python-ci.template.yml`**: CI triggers updated to `[main, 'feature/**']`, PR target `[main]`.
+- **`cd-test.template.yml`**: Default branch changed from `develop` to `main`.
+- **`organization-branch-protection.sh`**: Removed `develop` branch creation and protection. Only `main` is managed.
+- **`setup-repo.sh`**: Removed `develop` branch creation on new repo setup.
+
+### Added
+- **`release.yml`**: Organization-tools now self-versions via the auto-release workflow.
+- **`scripts/migrate-to-tbd.sh`**: Script to migrate all org repos to TBD at once. Detects unmerged `develop` commits (excluding back-merges) and opens PRs with updated templates in each repo.
+
+### Deprecated
+- **`release-prepare.yml`**: No longer used in the primary release flow. Kept for reference.
+
+### Fixed
+- `release-publish.yml`: Added `git config` step before tag creation (fixes `Committer identity unknown` on self-hosted runners).
+
+---
 
 ## [1.1.6] - 2026-04-19
 
@@ -15,11 +51,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `cd-node-vercel.yml`: Reemplazado `amondnet/vercel-action@v25` (instala `vercel@25.1.0`) por `npx vercel@latest` directo — la API de Vercel ahora exige `>=47.2.2`.
 - `cd-node-vercel.yml`: Corregido `actions/checkout@v6` (no existe) → `@v4`.
 - `cd-node-vercel.yml`: Actualizado `pnpm/action-setup@v3` → `@v4`, eliminada version fija.
-[1.1.4]: https://github.com/ArkeonProject/organization-tools/releases/tag/v1.1.4
-[1.1.3]: https://github.com/ArkeonProject/organization-tools/releases/tag/v1.1.3
-[1.1.2]: https://github.com/ArkeonProject/organization-tools/releases/tag/v1.1.2
-[1.1.1]: https://github.com/ArkeonProject/organization-tools/releases/tag/v1.1.1
-[1.1.0]: https://github.com/ArkeonProject/organization-tools/releases/tag/v1.1.0
 
 ## [1.1.5] - 2026-02-14
 
@@ -134,7 +165,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-[Unreleased]: https://github.com/ArkeonProject/organization-tools/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/ArkeonProject/organization-tools/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/ArkeonProject/organization-tools/releases/tag/v1.2.0
+[1.1.6]: https://github.com/ArkeonProject/organization-tools/releases/tag/v1.1.6
+[1.1.5]: https://github.com/ArkeonProject/organization-tools/releases/tag/v1.1.5
+[1.1.4]: https://github.com/ArkeonProject/organization-tools/releases/tag/v1.1.4
+[1.1.3]: https://github.com/ArkeonProject/organization-tools/releases/tag/v1.1.3
+[1.1.2]: https://github.com/ArkeonProject/organization-tools/releases/tag/v1.1.2
+[1.1.1]: https://github.com/ArkeonProject/organization-tools/releases/tag/v1.1.1
 [1.1.0]: https://github.com/ArkeonProject/organization-tools/releases/tag/v1.1.0
 [1.0.2]: https://github.com/ArkeonProject/organization-tools/releases/tag/v1.0.2
 [1.0.1]: https://github.com/ArkeonProject/organization-tools/releases/tag/v1.0.1

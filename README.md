@@ -25,9 +25,9 @@ This organization uses a **Self-Hosted Runner** optimized for Intel N100 hardwar
 - `ci-python.yml` - CI for Python projects
 - `cd-node-vercel.yml` - Deploy Node.js to Vercel
 - `cd-python-docker.yml` - (Legacy) Build and push Docker images for Python
-- `release-prepare.yml` - Prepare releases
-- `release-publish.yml` - Publish releases
-- `hotfix-create.yml` - Create hotfixes
+- `release-publish.yml` - Auto-publish releases from conventional commits
+- `hotfix-create.yml` - Create hotfix branches
+- `release-prepare.yml` - ~~Prepare releases~~ (deprecated)
 
 ### Templates (`.github/workflows/templates/`)
 Ready-to-copy templates for new repositories:

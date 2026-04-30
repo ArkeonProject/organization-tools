@@ -80,15 +80,13 @@ Workflows that can be called from other repositories using `workflow_call` trigg
 
 #### Release Workflows
 
-- **release-prepare.yml**: Prepare release branch
-  - Version bumping (semver)
-  - Changelog generation
-  - PR creation
+- **release-publish.yml**: Auto-publish release on push to main
+  - Analyzes conventional commits since last tag
+  - Auto-detects bump type (feat→minor, fix→patch, feat!→major)
+  - Creates git tag + GitHub Release
+  - Skips if only chore/docs/style commits
 
-- **release-publish.yml**: Publish release
-  - Git tagging
-  - GitHub Release creation
-  - Artifact publishing
+- **release-prepare.yml**: *(deprecated)* Manual release branch preparation
 
 - **hotfix-create.yml**: Create hotfix branch
   - Emergency fix workflow
