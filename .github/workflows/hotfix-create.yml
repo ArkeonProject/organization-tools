@@ -9,8 +9,9 @@ on:
     inputs:
       description:
         description: 'Hotfix description (e.g. fix-auth-token-expiry)'
-        required: true
+        required: false
         type: string
+        default: ''
       issue-number:
         description: 'Related issue number (optional)'
         required: false
