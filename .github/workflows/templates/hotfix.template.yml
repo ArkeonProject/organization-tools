@@ -15,7 +15,7 @@ on:
 jobs:
   create-hotfix:
     name: Create Hotfix
-    uses: ArkeonProject/organization-tools/.github/workflows/hotfix-create.yml@v1.0.1
+    uses: ArkeonProject/organization-tools/.github/workflows/hotfix-create.yml@v1.2.0
     with:
       description: ${{ github.event.inputs.description }}
       issue-number: ${{ github.event.inputs.issue-number }}
