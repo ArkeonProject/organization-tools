@@ -111,8 +111,17 @@ jobs:
       - name: 🛠️ Install pnpm (standalone)
         run: |
           echo "Installing pnpm standalone (no npm required)..."
-          wget -qO- https://get.pnpm.io/install.sh | ENV="$HOME/.bashrc" SHELL="$(which bash)" PNPM_VERSION=9 bash -
+          PNPM_VERSION="9.15.4"
+          PLATFORM=$(uname -s | tr '[:upper:]' '[:lower:]')
+          ARCH=$(uname -m)
+          case "$ARCH" in
+            x86_64) ARCH="x64" ;;
+            aarch64) ARCH="arm64" ;;
+          esac
           PNPM_HOME="$HOME/.local/share/pnpm"
+          mkdir -p "$PNPM_HOME"
+          curl -fsSL "https://github.com/pnpm/pnpm/releases/download/v${PNPM_VERSION}/pnpm-${PLATFORM}-${ARCH}" -o "$PNPM_HOME/pnpm"
+          chmod +x "$PNPM_HOME/pnpm"
           echo "$PNPM_HOME" >> "$GITHUB_PATH"
           echo "PNPM_HOME=$PNPM_HOME" >> "$GITHUB_ENV"
           export PATH="$PNPM_HOME:$PATH"
