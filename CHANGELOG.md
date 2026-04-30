@@ -8,7 +8,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- **`release-publish.yml`**: Now also pushes a floating major-version tag (`v1`, `v2`, …) on every release. Templates can pin to `@v1` and auto-track the latest 1.x.x release without manual updates.
+- **All templates** (`release`, `hotfix`, `node-cd`, `python-cd`): Pinned to `@v1` instead of `@v1.2.0` — auto-tracks latest 1.x release.
+
+### Changed
+- **`scripts/migrate-to-tbd.sh`**: Hardened — per-repo error isolation (`set -e` removed), detects existing migration PRs to avoid duplicates, `cd.yml` now opt-in via `--include-cd` (CD strategy is project-specific), reports failed repos in summary.
+
+---
+
+## [1.2.1] - 2026-04-30
+
+### Fixed
 - `release.template.yml` and `hotfix.template.yml`: Pinned to `@v1.2.0` — templates still referenced `@v1.0.1`, which lacks auto-detection and git identity config.
+
+### Changed
+- `actions/github-script`: Bumped from `@v7` to `@v9` across `release-publish.yml`, `hotfix-create.yml`, and `release-prepare.yml`. v7 ran on Node 16 (EOL).
 
 ### Docs
 - `README.md`: Marked `release-prepare.yml` as deprecated.
@@ -165,7 +179,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-[Unreleased]: https://github.com/ArkeonProject/organization-tools/compare/v1.2.0...HEAD
+[Unreleased]: https://github.com/ArkeonProject/organization-tools/compare/v1.2.1...HEAD
+[1.2.1]: https://github.com/ArkeonProject/organization-tools/releases/tag/v1.2.1
 [1.2.0]: https://github.com/ArkeonProject/organization-tools/releases/tag/v1.2.0
 [1.1.6]: https://github.com/ArkeonProject/organization-tools/releases/tag/v1.1.6
 [1.1.5]: https://github.com/ArkeonProject/organization-tools/releases/tag/v1.1.5

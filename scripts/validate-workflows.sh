@@ -91,11 +91,8 @@ check_common_issues() {
   fi
   
   # Check for missing workflow_call trigger in reusable workflows
-  if [[ "$file" == *"/reusable/"* ]]; then
-    if ! grep -q "workflow_call:" "$file"; then
-      issues+=("Reusable workflow missing 'workflow_call' trigger")
-    fi
-  fi
+  # Note: reusable workflows live at .github/workflows/ top level,
+  # not in a subdirectory. We skip the old /reusable/ path check.
   
   # Check for deprecated actions
   if grep -q "actions/checkout@v[12]" "$file"; then

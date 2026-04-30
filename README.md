@@ -111,12 +111,23 @@ main (production + integration)
 
 ### Creating a Release
 
-Via GitHub UI:
-1. Go to Actions → Release → Run workflow
-2. Select version bump (patch/minor/major)
-3. Workflow creates release/* branch automatically
-4. Merge PR to main
-5. Automatically published
+Releases are **fully automatic** on every push to `main`. The `release-publish.yml` workflow analyzes conventional commits and decides the bump:
+
+| Commit type | Bump | Example |
+|---|---|---|
+| `feat:` | minor | `v1.0.0` → `v1.1.0` |
+| `fix:` / `perf:` | patch | `v1.0.0` → `v1.0.1` |
+| `feat!:` / `BREAKING CHANGE` | major | `v1.0.0` → `v2.0.0` |
+| `chore:` / `docs:` / `style:` / `refactor:` | none | no release |
+
+No manual action is required. Just merge your PR to `main`.
+
+> **Fallback (manual):** If you ever need to force a release, create a tag directly:
+> ```bash
+> git checkout main && git pull
+> git tag -a v1.2.3 -m "Release v1.2.3"
+> git push origin v1.2.3
+> ```
 
 ### Creating a Hotfix
 
@@ -130,7 +141,7 @@ Via GitHub UI:
 
 ## 🔄 Updates
 
-Workflows are updated centrally in this repository. All repos using them receive updates automatically.
+Workflows are updated centrally in this repository. Repos that pin to `@v1` or `@main` receive updates automatically. If you pin to a specific version (e.g. `@v1.2.1`), you must update manually.
 
 ## 🛠️ Development
 

@@ -7,7 +7,7 @@ on:
 jobs:
   publish:
     name: Publish Release
-    uses: ArkeonProject/organization-tools/.github/workflows/release-publish.yml@v1.2.0
+    uses: ArkeonProject/organization-tools/.github/workflows/release-publish.yml@v1
     with:
       create-github-release: true
     secrets: inherit

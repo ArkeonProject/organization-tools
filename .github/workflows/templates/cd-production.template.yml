@@ -7,7 +7,7 @@ on:
 jobs:
   deploy:
     # Uses the unified Docker workflow in production mode
-    uses: ArkeonProject/organization-tools/.github/workflows/reusable-docker-build.yml@v1.1.0
+    uses: ArkeonProject/organization-tools/.github/workflows/reusable-docker-build.yml@v1
     with:
       image_name: ${{ github.repository }}/web
       mode: 'production'

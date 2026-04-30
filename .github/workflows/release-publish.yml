@@ -94,12 +94,20 @@ jobs:
 
           echo "new=${MAJOR}.${MINOR}.${PATCH}" >> $GITHUB_OUTPUT
           echo "tag=v${MAJOR}.${MINOR}.${PATCH}" >> $GITHUB_OUTPUT
+          echo "major=v${MAJOR}" >> $GITHUB_OUTPUT
 
       - name: 🏷️ Create and push tag
         if: steps.bump.outputs.type != 'none'
         run: |
           git tag -a "${{ steps.version.outputs.tag }}" -m "Release ${{ steps.version.outputs.tag }}"
           git push origin "${{ steps.version.outputs.tag }}"
+
+      - name: 🔗 Update floating major tag
+        if: steps.bump.outputs.type != 'none'
+        run: |
+          MAJOR_TAG="${{ steps.version.outputs.major }}"
+          git tag -f "$MAJOR_TAG" "${{ steps.version.outputs.tag }}"
+          git push origin "$MAJOR_TAG" --force
 
       - name: 🎉 Create GitHub Release
         if: steps.bump.outputs.type != 'none' && inputs.create-github-release

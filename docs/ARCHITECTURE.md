@@ -49,7 +49,7 @@ graph TB
 
 ### 1. Reusable Workflows
 
-**Location**: `.github/workflows/reusable/`
+**Location**: `.github/workflows/`
 
 Workflows that can be called from other repositories using `workflow_call` trigger.
 
@@ -127,7 +127,7 @@ Templates call reusable workflows with sensible defaults:
 ```yaml
 jobs:
   ci:
-    uses: ArkeonProject/organization-tools/.github/workflows/reusable/ci-node.yml@main
+    uses: ArkeonProject/organization-tools/.github/workflows/ci-node.yml@v1
     with:
       node-version: '20'
       package-manager: 'pnpm'
@@ -189,18 +189,13 @@ gitGraph
     commit id: "Add auth"
     checkout main
     merge feature/auth
+    commit id: "Tag v1.0.0"
     
-    branch release/v1.1.0
-    checkout release/v1.1.0
-    commit id: "Bump version"
-    checkout main
-    merge release/v1.1.0 tag: "v1.1.0"
-    
-    branch hotfix/v1.1.1
-    checkout hotfix/v1.1.1
+    branch hotfix/fix-auth
+    checkout hotfix/fix-auth
     commit id: "Critical fix"
     checkout main
-    merge hotfix/v1.1.1 tag: "v1.1.1"
+    merge hotfix/fix-auth tag: "v1.0.1"
 ```
 
 ### Branch Rules (Trunk-Based Development)
@@ -220,17 +215,15 @@ gitGraph
    - Merge to: main via PR
    - Naming: `bugfix/short-description`
 
-4. **release/*** (releases)
-   - Branch from: main
-   - Merge to: main
-   - Auto-created by workflow
-   - Naming: `release/vX.X.X`
+4. **release tags** (`vX.X.X`)
+    - Created automatically by `release-publish.yml` on every push to `main`
+    - No manual branch needed
 
 5. **hotfix/*** (emergency fixes)
-   - Branch from: main
-   - Merge to: main
-   - Auto-created by workflow
-   - Naming: `hotfix/vX.X.X`
+    - Branch from: main
+    - Merge to: main
+    - Auto-created by workflow
+    - Naming: `hotfix/<slug>` (e.g. `hotfix/fix-auth-token`)
 
 ### Critical Rules
 
@@ -319,7 +312,7 @@ Releases are managed with git tags (`v*.*.*`) on main, not with a separate branc
 - Use git tags for major versions
 - Consumers can pin to specific versions:
   ```yaml
-  uses: ArkeonProject/organization-tools/.github/workflows/reusable/ci-node.yml@v1.0.0
+  uses: ArkeonProject/organization-tools/.github/workflows/ci-node.yml@v1
   ```
 - Or use `@main` for latest
 
@@ -332,6 +325,6 @@ Releases are managed with git tags (`v*.*.*`) on main, not with a separate branc
 
 ---
 
-**Last Updated**: 2025-12-06  
+**Last Updated**: 2026-04-30  
 **Maintainer**: @daviilpzDev
 

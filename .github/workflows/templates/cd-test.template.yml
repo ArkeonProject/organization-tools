@@ -12,7 +12,7 @@ on:
 jobs:
   test-build:
     # Uses the unified Docker workflow in milestone mode
-    uses: ArkeonProject/organization-tools/.github/workflows/reusable-docker-build.yml@v1.1.0
+    uses: ArkeonProject/organization-tools/.github/workflows/reusable-docker-build.yml@v1
     with:
       image_name: ${{ github.repository }}/web
       mode: 'milestone'
