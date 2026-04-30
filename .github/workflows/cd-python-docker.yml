@@ -122,7 +122,7 @@ jobs:
       
       - name: 🏷️ Extract Docker metadata
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: |
             ${{ inputs.push-to-ghcr && format('ghcr.io/{0}/{1}', github.repository_owner, inputs.image-name) || '' }}
