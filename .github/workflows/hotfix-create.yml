@@ -9,8 +9,9 @@ on:
     inputs:
       description:
         description: 'Hotfix description (e.g. fix-auth-token-expiry)'
-        required: true
+        required: false
         type: string
+        default: ''
       issue-number:
         description: 'Related issue number (optional)'
         required: false
@@ -51,20 +52,24 @@ jobs:
         uses: actions/github-script@v9
         with:
           script: |
+            const issueNumber = '${{ inputs.issue-number }}';
+            const issueRef = issueNumber ? `\n**Fixes:** #${issueNumber}` : '';
+            const body = [
+              '## 🚨 Hotfix',
+              '',
+              '**Descripción:** ${{ inputs.description }}' + issueRef,
+              '',
+              '### Pasos',
+              '1. `git fetch && git checkout ${{ steps.branch.outputs.branch }}`',
+              '2. Implementa el fix usando commits `fix:`',
+              '3. Push — la PR se actualiza automáticamente',
+              '4. Al mergear a main: **patch release creado automáticamente**',
+            ].join('\n');
             await github.rest.pulls.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              title: `🚨 hotfix: ${{ inputs.description }}`,
+              title: '🚨 hotfix: ${{ inputs.description }}',
               head: '${{ steps.branch.outputs.branch }}',
               base: 'main',
-              body: `## 🚨 Hotfix
-
-**Descripción:** ${{ inputs.description }}
-${{ inputs.issue-number && format('\n**Fixes:** #{0}', inputs.issue-number) || '' }}
-
-### Pasos
-1. \`git fetch && git checkout ${{ steps.branch.outputs.branch }}\`
-2. Implementa el fix usando commits \`fix:\`
-3. Push — la PR se actualiza automáticamente
-4. Al mergear a main: **patch release creado automáticamente**`
+              body,
             });
