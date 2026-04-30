@@ -35,6 +35,11 @@ jobs:
           ref: main
           fetch-depth: 0
 
+      - name: ⚙️ Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
       - name: 🏷️ Get last tag
         id: last-tag
         run: |
