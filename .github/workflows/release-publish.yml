@@ -43,7 +43,8 @@ jobs:
       - name: 🏷️ Get last tag
         id: last-tag
         run: |
-          LAST=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+          LAST=$(git tag -l 'v[0-9]*' --sort=-v:refname 2>/dev/null | head -1)
+          [ -z "$LAST" ] && LAST="v0.0.0"
           echo "ref=$LAST" >> $GITHUB_OUTPUT
           echo "version=${LAST#v}" >> $GITHUB_OUTPUT
 
