@@ -4,19 +4,19 @@
 #
 # Para cada repo:
 #   1. Detecta commits en develop que NO están en main (excluye back-merges)
-#   2. Actualiza los workflow templates via PR
+#   2. Actualiza ci.yml, release.yml y hotfix.yml via PR
 #
 # Uso:
 #   ./scripts/migrate-to-tbd.sh              # aplica en todos los repos
 #   ./scripts/migrate-to-tbd.sh --dry-run    # solo muestra qué haría
 #   ./scripts/migrate-to-tbd.sh --org MiOrg  # otra organización
-
-set -e
+#   ./scripts/migrate-to-tbd.sh --include-cd # también actualiza cd.yml (revisar manualmente)
 
 ORG="${ORG:-ArkeonProject}"
 ORG_TOOLS="organization-tools"
 MIGRATION_BRANCH="chore/migrate-to-tbd"
 DRY_RUN=false
+INCLUDE_CD=false
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -35,10 +35,15 @@ print_header()  { echo -e "\n${CYAN}▸ $1${NC}"; }
 
 while [[ $# -gt 0 ]]; do
   case $1 in
-    --dry-run) DRY_RUN=true; shift ;;
-    --org) ORG="$2"; shift 2 ;;
+    --dry-run)   DRY_RUN=true; shift ;;
+    --include-cd) INCLUDE_CD=true; shift ;;
+    --org)       ORG="$2"; shift 2 ;;
     -h|--help)
-      echo "Uso: $0 [--dry-run] [--org <nombre>]"
+      echo "Uso: $0 [--dry-run] [--include-cd] [--org <nombre>]"
+      echo ""
+      echo "  --dry-run     Muestra qué haría sin aplicar cambios"
+      echo "  --include-cd  También actualiza cd.yml (revisar manualmente antes de mergear)"
+      echo "  --org         Organización GitHub (default: ArkeonProject)"
       exit 0
       ;;
     *) shift ;;
@@ -115,6 +120,7 @@ list_unmerged_develop() {
 }
 
 # Sube o actualiza un archivo en el repo vía GitHub Contents API
+# Retorna 0 en éxito, 1 en fallo (no aborta el script)
 update_workflow_file() {
   local repo=$1
   local filename=$2
@@ -157,7 +163,10 @@ update_workflow_file() {
   fi
 
   gh api -X PUT "/repos/$ORG/$repo/contents/.github/workflows/$filename" \
-    --input <(echo "$payload") >/dev/null
+    --input <(echo "$payload") >/dev/null || {
+      print_error "Falló al actualizar $filename"
+      return 1
+    }
 
   print_success "$filename"
 }
@@ -166,11 +175,21 @@ update_workflow_file() {
 create_migration_branch() {
   local repo=$1
   local main_sha
-  main_sha=$(gh api "/repos/$ORG/$repo/branches/main" --jq '.commit.sha')
+  main_sha=$(gh api "/repos/$ORG/$repo/branches/main" --jq '.commit.sha' 2>/dev/null) || {
+    print_error "No se pudo obtener SHA de main"
+    return 1
+  }
 
   gh api -X POST "/repos/$ORG/$repo/git/refs" \
     -f ref="refs/heads/$MIGRATION_BRANCH" \
     -f sha="$main_sha" >/dev/null 2>&1 || true
+}
+
+# Devuelve URL del PR de migración si ya existe, o vacío
+find_existing_pr() {
+  local repo=$1
+  gh api "/repos/$ORG/$repo/pulls?head=$ORG:$MIGRATION_BRANCH&state=open" \
+    --jq '.[0].html_url // ""' 2>/dev/null || echo ""
 }
 
 # ─── Main ────────────────────────────────────────────────────────────────────
@@ -179,7 +198,8 @@ echo ""
 echo "═══════════════════════════════════════════════════════════════════"
 echo "  🚀 Migración a Trunk-Based Development — $ORG"
 echo "═══════════════════════════════════════════════════════════════════"
-[ "$DRY_RUN" = true ] && echo "  ⚠️  DRY RUN — no se aplicarán cambios"
+[ "$DRY_RUN"    = true ] && echo "  ⚠️  DRY RUN — no se aplicarán cambios"
+[ "$INCLUDE_CD" = true ] && echo "  📦  Modo --include-cd activo — cd.yml también se actualizará"
 echo ""
 
 REPOS=$(gh repo list "$ORG" --limit 200 --json name -q '.[].name' | grep -v "^${ORG_TOOLS}$")
@@ -187,6 +207,7 @@ REPOS=$(gh repo list "$ORG" --limit 200 --json name -q '.[].name' | grep -v "^${
 declare -a WARN_REPOS=()
 declare -a MIGRATED_REPOS=()
 declare -a SKIPPED_REPOS=()
+declare -a FAILED_REPOS=()
 
 for repo in $REPOS; do
   echo "───────────────────────────────────────────────────────────────────"
@@ -205,46 +226,74 @@ for repo in $REPOS; do
     WARN_REPOS+=("$repo ($UNMERGED commits)")
   fi
 
-  # ── 2. Detectar tipo de proyecto ────────────────────────────────────
+  # ── 2. Detectar PR existente ─────────────────────────────────────────
+  EXISTING_PR=$(find_existing_pr "$repo")
+  if [ -n "$EXISTING_PR" ]; then
+    print_info "PR ya existe: $EXISTING_PR"
+    SKIPPED_REPOS+=("$repo (PR ya existe)")
+    continue
+  fi
+
+  # ── 3. Detectar tipo de proyecto ────────────────────────────────────
   PROJECT_TYPE=$(detect_project_type "$repo")
   print_info "Tipo detectado: $PROJECT_TYPE"
 
   if [ "$DRY_RUN" = true ]; then
-    print_info "[DRY RUN] Aplicaría: ci.yml, cd.yml, release.yml, hotfix.yml"
+    if [ "$INCLUDE_CD" = true ]; then
+      print_info "[DRY RUN] Aplicaría: ci.yml, release.yml, hotfix.yml, cd.yml"
+    else
+      print_info "[DRY RUN] Aplicaría: ci.yml, release.yml, hotfix.yml"
+    fi
     MIGRATED_REPOS+=("$repo")
     continue
   fi
 
-  # ── 3. Crear rama de migración ──────────────────────────────────────
-  create_migration_branch "$repo"
-
-  # ── 4. Aplicar templates ────────────────────────────────────────────
-  print_info "Actualizando workflows..."
-
-  if [ "$PROJECT_TYPE" = "node" ]; then
-    update_workflow_file "$repo" "ci.yml"   "$BASE_URL/node-ci.template.yml"   "$MIGRATION_BRANCH"
-    update_workflow_file "$repo" "cd.yml"   "$BASE_URL/node-cd.template.yml"   "$MIGRATION_BRANCH"
-  else
-    update_workflow_file "$repo" "ci.yml"   "$BASE_URL/python-ci.template.yml" "$MIGRATION_BRANCH"
-    update_workflow_file "$repo" "cd.yml"   "$BASE_URL/python-cd.template.yml" "$MIGRATION_BRANCH"
+  # ── 4. Crear rama de migración ──────────────────────────────────────
+  if ! create_migration_branch "$repo"; then
+    FAILED_REPOS+=("$repo (no se pudo crear rama)")
+    continue
   fi
 
-  update_workflow_file "$repo" "release.yml" "$BASE_URL/release.template.yml" "$MIGRATION_BRANCH"
-  update_workflow_file "$repo" "hotfix.yml"  "$BASE_URL/hotfix.template.yml"  "$MIGRATION_BRANCH"
+  # ── 5. Aplicar templates ─────────────────────────────────────────────
+  print_info "Actualizando workflows..."
+  REPO_FAILED=false
 
-  # ── 5. Crear PR ─────────────────────────────────────────────────────
+  if [ "$PROJECT_TYPE" = "node" ]; then
+    update_workflow_file "$repo" "ci.yml" "$BASE_URL/node-ci.template.yml" "$MIGRATION_BRANCH" || REPO_FAILED=true
+    if [ "$INCLUDE_CD" = true ]; then
+      update_workflow_file "$repo" "cd.yml" "$BASE_URL/node-cd.template.yml" "$MIGRATION_BRANCH" || REPO_FAILED=true
+    fi
+  else
+    update_workflow_file "$repo" "ci.yml" "$BASE_URL/python-ci.template.yml" "$MIGRATION_BRANCH" || REPO_FAILED=true
+    if [ "$INCLUDE_CD" = true ]; then
+      update_workflow_file "$repo" "cd.yml" "$BASE_URL/python-cd.template.yml" "$MIGRATION_BRANCH" || REPO_FAILED=true
+    fi
+  fi
+
+  update_workflow_file "$repo" "release.yml" "$BASE_URL/release.template.yml" "$MIGRATION_BRANCH" || REPO_FAILED=true
+  update_workflow_file "$repo" "hotfix.yml"  "$BASE_URL/hotfix.template.yml"  "$MIGRATION_BRANCH" || REPO_FAILED=true
+
+  if [ "$REPO_FAILED" = true ]; then
+    FAILED_REPOS+=("$repo (error al actualizar workflows)")
+    continue
+  fi
+
+  # ── 6. Crear PR ─────────────────────────────────────────────────────
+  CD_LINE=""
+  [ "$INCLUDE_CD" = true ] && CD_LINE="\n- \`cd.yml\` — triggers actualizados a TBD"
+
   PR_BODY="## Migración a Trunk-Based Development
 
 ### Cambios aplicados
 - \`ci.yml\` — CI corre en \`main\` y \`feature/**\`
 - \`release.yml\` — auto-release desde conventional commits al mergear a main
-- \`hotfix.yml\` — branch creada sin bump manual; el release es automático
+- \`hotfix.yml\` — branch creada sin bump manual; el release es automático${CD_LINE}
 
 ### Nuevo flujo de release automático
 \`\`\`
-feat:  → merge a main → minor  (v1.1.0)
-fix:   → merge a main → patch  (v1.0.1)
-feat!: → merge a main → major  (v2.0.0)
+feat:  → merge a main → minor  (ej: v1.1.0)
+fix:   → merge a main → patch  (ej: v1.0.1)
+feat!: → merge a main → major  (ej: v2.0.0)
 chore/docs → merge a main → sin release
 \`\`\`
 
@@ -260,10 +309,10 @@ chore/docs → merge a main → sin release
       --title "ci: migrate workflows to trunk-based development" \
       --body "$PR_BODY" \
       2>/dev/null
-  ) || PR_URL="PR ya existente"
+  ) || { PR_URL="(error al crear PR)"; FAILED_REPOS+=("$repo (PR no creado)"); }
 
   print_success "PR: $PR_URL"
-  MIGRATED_REPOS+=("$repo")
+  MIGRATED_REPOS+=("$repo → $PR_URL")
 done
 
 # ─── Resumen ─────────────────────────────────────────────────────────────────
@@ -273,8 +322,15 @@ echo "════════════════════════�
 echo "  📊 RESUMEN"
 echo "═══════════════════════════════════════════════════════════════════"
 echo ""
+
 echo "  ✅ PRs creados (${#MIGRATED_REPOS[@]}):"
 for r in "${MIGRATED_REPOS[@]}"; do echo "     - $r"; done
+
+if [ ${#SKIPPED_REPOS[@]} -gt 0 ]; then
+  echo ""
+  echo "  ⏭️  Omitidos — PR ya existía (${#SKIPPED_REPOS[@]}):"
+  for r in "${SKIPPED_REPOS[@]}"; do echo "     - $r"; done
+fi
 
 if [ ${#WARN_REPOS[@]} -gt 0 ]; then
   echo ""
@@ -282,6 +338,12 @@ if [ ${#WARN_REPOS[@]} -gt 0 ]; then
   for r in "${WARN_REPOS[@]}"; do echo "     - $r"; done
   echo ""
   echo "  → Revisa esos commits ANTES de mergear los PRs y eliminar develop"
+fi
+
+if [ ${#FAILED_REPOS[@]} -gt 0 ]; then
+  echo ""
+  echo "  ❌ Fallidos (${#FAILED_REPOS[@]}):"
+  for r in "${FAILED_REPOS[@]}"; do echo "     - $r"; done
 fi
 
 echo ""

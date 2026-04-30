@@ -26,46 +26,32 @@ gh pr create --base main --title "feat: add awesome new feature"
 
 ### 2. Creating a Release
 
-**Via GitHub UI (Recommended)**:
+**Automatic (default)**:
 
-1. Go to **Actions** tab
-2. Select **Release** workflow
-3. Click **Run workflow**
-4. Choose version bump:
-   - `patch` - Bug fixes (1.0.0 → 1.0.1)
-   - `minor` - New features (1.0.0 → 1.1.0)
-   - `major` - Breaking changes (1.0.0 → 2.0.0)
-5. Click **Run workflow**
+Releases are generated automatically by `release-publish.yml` on every push to `main`.
 
-This automatically:
-- ✅ Creates `release/vX.X.X` branch from main
-- ✅ Bumps version in package.json/pyproject.toml
-- ✅ Updates CHANGELOG.md
-- ✅ Creates PR to main
-- ✅ After merge: creates git tag, GitHub release, deploys
+| Commit type | Result |
+|---|---|
+| `feat:` | minor bump (e.g. `v1.0.0` → `v1.1.0`) |
+| `fix:` / `perf:` | patch bump (e.g. `v1.0.0` → `v1.0.1`) |
+| `feat!:` / `BREAKING CHANGE` | major bump (e.g. `v1.0.0` → `v2.0.0`) |
+| `chore:` / `docs:` / `style:` / `refactor:` | no release |
 
-**Manual Process** (if needed):
+Just merge your PR to `main` — the workflow does the rest.
+
+**Manual fallback** (if auto-release fails):
 
 ```bash
 # From main
 git checkout main
 git pull origin main
 
-# Create release branch
-git checkout -b release/v1.2.0
+# Create tag directly
+git tag -a v1.2.3 -m "Release v1.2.3"
+git push origin v1.2.3
 
-# Bump version
-npm version minor  # or: poetry version minor
-
-# Update CHANGELOG.md manually
-
-# Commit and push
-git add .
-git commit -m "chore(release): prepare v1.2.0"
-git push origin release/v1.2.0
-
-# Create PR to main
-gh pr create --base main --title "Release v1.2.0"
+# Create GitHub Release manually
+gh release create v1.2.3 --title "v1.2.3" --generate-notes
 ```
 
 ### 3. Creating a Hotfix
@@ -78,12 +64,12 @@ gh pr create --base main --title "Release v1.2.0"
 4. Enter hotfix description
 5. Click **Run workflow**
 
-This creates `hotfix/vX.X.X` branch from main.
+This creates a `hotfix/<slug>` branch from `main` (e.g. `hotfix/fix-auth-token`).
 
 **Then**:
 
 ```bash
-# Checkout the created hotfix branch (named after description)
+# Checkout the created hotfix branch
 git fetch origin
 git checkout hotfix/fix-authentication-bug
 
@@ -95,8 +81,8 @@ git commit -m "fix: critical bug in authentication"
 git push origin hotfix/fix-authentication-bug
 ```
 
-After merge to main:
-- Automatically tagged as patch release (e.g. v1.2.1)
+After merge to `main`:
+- `release-publish.yml` detects the `fix:` commit and tags a **patch release** automatically (e.g. `v1.2.1`).
 
 ## Commit Conventions
 
@@ -148,9 +134,10 @@ BREAKING CHANGE: API now requires OAuth2 instead of API keys
 ```
 feature/short-description      # New features
 bugfix/short-description       # Bug fixes
-hotfix/vX.X.X                 # Emergency fixes (auto-created)
-release/vX.X.X                # Releases (auto-created)
+hotfix/<slug>                  # Emergency fixes (auto-created)
 ```
+
+> `release/vX.X.X` branches no longer exist — releases are auto-tagged on `main`.
 
 Examples:
 ```
@@ -158,6 +145,8 @@ feature/user-dashboard
 feature/add-payment-integration
 bugfix/fix-login-redirect
 bugfix/resolve-memory-leak
+hotfix/fix-auth-token
+hotfix/critical-memory-leak
 ```
 
 ## Testing Your Changes
@@ -188,7 +177,7 @@ pnpm run build  # or: poetry run python -m build
 2. **Apply your workflow changes**
    ```bash
    # Copy modified workflow
-   cp .github/workflows/reusable/ci-node.yml ../test-workflow/.github/workflows/
+    cp .github/workflows/ci-node.yml ../test-workflow/.github/workflows/
    ```
 
 3. **Test in the test repo**
@@ -396,6 +385,6 @@ A: Yes, use workflow inputs to configure behavior, or copy and modify templates.
 
 ---
 
-**Last Updated**: 2025-12-06  
+**Last Updated**: 2026-04-30  
 **Maintainer**: @daviilpzDev
 
