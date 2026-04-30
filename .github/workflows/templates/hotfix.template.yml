@@ -4,11 +4,11 @@ on:
   workflow_dispatch:
     inputs:
       description:
-        description: 'Hotfix description'
+        description: 'Hotfix description (e.g. fix-auth-token-expiry)'
         required: true
         type: string
       issue-number:
-        description: 'Related issue number'
+        description: 'Related issue number (optional)'
         required: false
         type: string
 
@@ -19,5 +19,4 @@ jobs:
     with:
       description: ${{ github.event.inputs.description }}
       issue-number: ${{ github.event.inputs.issue-number }}
-      project-type: 'node'
     secrets: inherit

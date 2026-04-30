@@ -5,9 +5,9 @@
 ### 1. Working on a Feature
 
 ```bash
-# Start from develop
-git checkout develop
-git pull origin develop
+# Start from main
+git checkout main
+git pull origin main
 
 # Create feature branch
 git checkout -b feature/my-awesome-feature
@@ -21,7 +21,7 @@ git commit -m "feat: add awesome new feature"
 
 # Push and create PR
 git push origin feature/my-awesome-feature
-gh pr create --base develop --title "feat: add awesome new feature"
+gh pr create --base main --title "feat: add awesome new feature"
 ```
 
 ### 2. Creating a Release
@@ -38,7 +38,7 @@ gh pr create --base develop --title "feat: add awesome new feature"
 5. Click **Run workflow**
 
 This automatically:
-- ✅ Creates `release/vX.X.X` branch from develop
+- ✅ Creates `release/vX.X.X` branch from main
 - ✅ Bumps version in package.json/pyproject.toml
 - ✅ Updates CHANGELOG.md
 - ✅ Creates PR to main
@@ -47,9 +47,9 @@ This automatically:
 **Manual Process** (if needed):
 
 ```bash
-# From develop
-git checkout develop
-git pull origin develop
+# From main
+git checkout main
+git pull origin main
 
 # Create release branch
 git checkout -b release/v1.2.0
@@ -103,7 +103,6 @@ gh pr create --base main --title "Hotfix v1.0.1: Fix authentication bug"
 
 After merge to main:
 - Automatically tagged and released
-- Automatically merged back to develop
 
 ## Commit Conventions
 
@@ -221,41 +220,36 @@ brew install actionlint  # macOS
 
 ## Resolving Merge Conflicts
 
-### Automatic Back-merge Fails
-
-If the automatic back-merge from main to develop fails:
+### Conflict in Feature Branch
 
 ```bash
-# Checkout develop
-git checkout develop
-git pull origin develop
-
-# Merge main
+# Update your feature branch from main
+git checkout feature/my-feature
 git fetch origin
-git merge origin/main
+git rebase origin/main
 
 # Resolve conflicts
 # Edit conflicting files
 # Look for <<<<<<< HEAD markers
-
-# After resolving
 git add .
-git commit -m "chore: resolve merge conflicts from main"
-git push origin develop
+git rebase --continue
+
+git push origin feature/my-feature --force-with-lease
 ```
 
 ### Conflict in Release Branch
 
 ```bash
-# Update your release branch
+# Update your release branch from main
 git checkout release/v1.2.0
-git pull origin develop
+git fetch origin
+git merge origin/main
 
 # Resolve conflicts
 # ... resolve ...
 
 git add .
-git commit -m "chore: resolve conflicts with develop"
+git commit -m "chore: resolve conflicts with main"
 git push origin release/v1.2.0
 ```
 
@@ -291,9 +285,9 @@ git push origin release/v1.2.0
 # Check trigger configuration
 on:
   push:
-    branches: [develop, main]  # Ensure correct branches
+    branches: [main, 'feature/**']  # Trunk-Based Development
   pull_request:
-    branches: [develop, main]
+    branches: [main]
 ```
 
 ### Testing Locally with Act
@@ -375,8 +369,8 @@ act -j ci --secret-file .secrets
 
 ## Frequently Asked Questions
 
-**Q: Can I merge develop to main directly?**  
-A: No. Always use release branches for controlled deployments.
+**Q: Can I push directly to main?**  
+A: No. Always open a PR from `feature/*`, `bugfix/*`, `release/*`, or `hotfix/*`.
 
 **Q: How do I update a workflow for all repos?**  
 A: Update it in organization-tools. All repos using it will automatically get the update.

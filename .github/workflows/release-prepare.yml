@@ -1,7 +1,9 @@
-# .github/workflows/reusable/release-prepare.yml
-# Reusable workflow for creating release branches and preparing releases
+# .github/workflows/release-prepare.yml
+# DEPRECATED — ya no se usa en trunk-based development.
+# Los releases se generan automáticamente desde release-publish.yml
+# al detectar conventional commits en main.
 
-name: 📦 Prepare Release
+name: 📦 Prepare Release [DEPRECATED]
 
 on:
   workflow_call:
@@ -21,7 +23,7 @@ on:
         description: 'Base branch for release'
         required: false
         type: string
-        default: 'develop'
+        default: 'main'
       
       project-type:
         description: 'Project type (node, python)'

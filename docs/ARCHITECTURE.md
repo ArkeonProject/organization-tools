@@ -92,7 +92,7 @@ Workflows that can be called from other repositories using `workflow_call` trigg
 
 - **hotfix-create.yml**: Create hotfix branch
   - Emergency fix workflow
-  - Auto-merge to develop
+  - Creates hotfix/* branch from main, PR back to main
 
 **Advantages**:
 - ✅ Single source of truth
@@ -168,13 +168,13 @@ sequenceDiagram
     participant GHA as GitHub Actions
     participant Deploy as Deployment Target
     
-    Dev->>Repo: Push to develop
+    Dev->>Repo: Push to feature/* or main
     Repo->>GHA: Trigger CI workflow
     GHA->>OrgTools: Call reusable/ci-node.yml
     OrgTools->>GHA: Execute workflow steps
     GHA->>Repo: Report status
     
-    Dev->>Repo: Merge to main
+    Dev->>Repo: Merge PR to main
     Repo->>GHA: Trigger CD workflow
     GHA->>OrgTools: Call reusable/cd-node-vercel.yml
     OrgTools->>Deploy: Deploy application
@@ -186,80 +186,67 @@ sequenceDiagram
 ```mermaid
 gitGraph
     commit id: "Initial"
-    branch develop
-    checkout develop
-    commit id: "Feature 1"
-    commit id: "Feature 2"
+    branch feature/auth
+    checkout feature/auth
+    commit id: "Add auth"
+    checkout main
+    merge feature/auth
     
     branch release/v1.1.0
     checkout release/v1.1.0
     commit id: "Bump version"
-    commit id: "Update changelog"
-    
     checkout main
     merge release/v1.1.0 tag: "v1.1.0"
     
-    checkout main
     branch hotfix/v1.1.1
+    checkout hotfix/v1.1.1
     commit id: "Critical fix"
-    
     checkout main
     merge hotfix/v1.1.1 tag: "v1.1.1"
-    
-    checkout develop
-    merge hotfix/v1.1.1
 ```
 
-### Branch Rules
+### Branch Rules (Trunk-Based Development)
 
-1. **main** (production)
-   - Protected: 2 required approvals
-   - Required status checks
+1. **main** (production + integration trunk)
+   - Protected: required PR + status checks
    - No direct commits
-   - Only accepts merges from release/* and hotfix/*
+   - Accepts merges from feature/*, bugfix/*, release/*, hotfix/*
 
-2. **develop** (integration)
-   - Protected: 1 required approval
-   - Required status checks
-   - No direct commits
-   - Accepts merges from feature/* and bugfix/*
-
-3. **feature/*** (new features)
-   - Branch from: develop
-   - Merge to: develop
+2. **feature/*** (new features)
+   - Branch from: main
+   - Merge to: main via PR
    - Naming: `feature/short-description`
 
-4. **bugfix/*** (bug fixes)
-   - Branch from: develop
-   - Merge to: develop
+3. **bugfix/*** (bug fixes)
+   - Branch from: main
+   - Merge to: main via PR
    - Naming: `bugfix/short-description`
 
-5. **release/*** (releases)
-   - Branch from: develop
+4. **release/*** (releases)
+   - Branch from: main
    - Merge to: main
    - Auto-created by workflow
    - Naming: `release/vX.X.X`
 
-6. **hotfix/*** (emergency fixes)
+5. **hotfix/*** (emergency fixes)
    - Branch from: main
-   - Merge to: main + develop
+   - Merge to: main
    - Auto-created by workflow
    - Naming: `hotfix/vX.X.X`
 
 ### Critical Rules
 
 > [!IMPORTANT]
-> **NEVER** merge develop → main directly  
-> **NEVER** merge main → develop directly
+> **NEVER** push directly to `main`  
+> **ALWAYS** use a PR — CI must pass before merge
 
-Always use release or hotfix branches for controlled deployments.
+Releases are managed with git tags (`v*.*.*`) on main, not with a separate branch.
 
 ## Security
 
 ### Branch Protection
 
-- **main**: 2 reviewers, required checks, no force push
-- **develop**: 1 reviewer, required checks, no force push
+- **main**: required PR + status checks, no force push, no direct commits
 
 ### Secrets Management
 
@@ -325,7 +312,7 @@ Always use release or hotfix branches for controlled deployments.
 
 1. Make changes in organization-tools
 2. Test in a sandbox repository
-3. Create PR to develop
+3. Create PR to main
 4. Merge after review
 5. All consumer repos automatically use updated version
 

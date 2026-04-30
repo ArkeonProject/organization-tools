@@ -14,8 +14,8 @@ cd organization-tools
 ### 2. Create a Feature Branch
 
 ```bash
-git checkout develop
-git pull origin develop
+git checkout main
+git pull origin main
 git checkout -b feature/your-feature-name
 ```
 
@@ -56,7 +56,7 @@ Commit types:
 
 ```bash
 git push origin feature/your-feature-name
-gh pr create --base develop --title "feat: your feature description"
+gh pr create --base main --title "feat: your feature description"
 ```
 
 ## 📝 Guidelines
@@ -149,8 +149,7 @@ For script changes:
 
 ### Approval Requirements
 
-- **develop branch**: 1 approval from maintainers
-- **main branch**: 2 approvals from maintainers
+- **main branch**: 1 approval from maintainers + CI passing
 
 ## 🏷️ Versioning
 
