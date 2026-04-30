@@ -95,19 +95,17 @@ Ready-to-copy templates for new repositories:
 - `DOCKERHUB_USERNAME` (optional)
 - `DOCKERHUB_TOKEN` (optional)
 
-## 🌿 Branching Model
+## 🌿 Branching Model (Trunk-Based Development)
 
 ```
-main (production)
-  ├── release/vX.X.X → PR → main
-  └── hotfix/vX.X.Y → PR → main
-
-develop (integration)
-  ├── feature/* → PR → develop
-  └── bugfix/* → PR → develop
+main (production + integration)
+  ├── feature/* → PR → main
+  ├── bugfix/*  → PR → main
+  ├── release/vX.X.X → PR → main (auto-created by workflow)
+  └── hotfix/vX.X.X  → PR → main (auto-created by workflow)
 ```
 
-**Golden Rule:** NEVER merge develop → main or main → develop directly. Always use release/hotfix branches.
+**Golden Rule:** Features merge directly to `main` via PRs. Releases use tags (`v*.*.*`) on main. Never push directly to `main`.
 
 ## 📖 Usage
 
@@ -128,7 +126,7 @@ Via GitHub UI:
 3. Workflow creates hotfix/* branch automatically
 4. Implement the fix
 5. Merge PR to main
-6. Automatically applied to develop
+6. Automatically tagged and released
 
 ## 🔄 Updates
 
@@ -157,8 +155,8 @@ Workflows are updated centrally in this repository. All repos using them receive
 
 ## ❓ FAQ
 
-**Q: Can I merge develop directly to main?**  
-A: No. Always use release branches for controlled deployments.
+**Q: Can I push directly to main?**  
+A: No. Always open a PR from `feature/*`, `bugfix/*`, `release/*`, or `hotfix/*`.
 
 **Q: How do I rollback a release?**  
 A: Create a hotfix with the necessary corrections.

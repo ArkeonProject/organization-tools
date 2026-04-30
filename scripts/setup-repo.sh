@@ -196,15 +196,6 @@ else
   fi
 fi
 
-# Create branch structure
-execute_or_preview \
-  "git checkout -b develop 2>/dev/null || git checkout develop" \
-  "Creating/switching to develop branch"
-
-execute_or_preview \
-  "git push origin develop 2>/dev/null || true" \
-  "Pushing develop branch"
-
 # Create workflows directory
 execute_or_preview \
   "mkdir -p .github/workflows" \
@@ -277,8 +268,8 @@ execute_or_preview \
   "Committing changes"
 
 execute_or_preview \
-  "git push origin develop" \
-  "Pushing to develop branch"
+  "git push origin main" \
+  "Pushing to main branch"
 
 # Summary
 echo ""
@@ -299,9 +290,8 @@ elif [ "$PROJECT_TYPE" == "python" ]; then
 fi
 
 echo "  2. Setup branch protection:"
-echo "     - main: 2 approvals required"
-echo "     - develop: 1 approval required"
-echo "  3. Test CI with a PR to develop"
+echo "     - main: required PR + status checks"
+echo "  3. Test CI with a PR from feature/* to main"
 echo ""
 
 if [ "$DRY_RUN" = true ]; then

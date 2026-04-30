@@ -6,7 +6,7 @@ on:
       branch:
         description: 'Branch to build from'
         required: false
-        default: 'develop'
+        default: 'main'
         type: string
 
 jobs:
@@ -16,5 +16,5 @@ jobs:
     with:
       image_name: ${{ github.repository }}/web
       mode: 'milestone'
-      branch: ${{ inputs.branch || 'develop' }}
+      branch: ${{ inputs.branch || 'main' }}
       dockerfile_path: './apps/web/Dockerfile'
