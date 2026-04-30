@@ -22,6 +22,7 @@ This organization uses a **Self-Hosted Runner** optimized for Intel N100 hardwar
 - `reusable-docker-build.yml` - **[NEW]** Unified Docker build & push (Production/Milestone modes)
 - `check-runner.yml` - **[NEW]** Diagnostic tool for self-hosted runner health
 - `ci-node.yml` - CI for Node.js projects (supports pnpm, npm, yarn, bun)
+- `ci-node-selfhosted.yml` - CI for Node.js on self-hosted runners **without npm** (installs pnpm standalone)
 - `ci-python.yml` - CI for Python projects
 - `cd-node-vercel.yml` - Deploy Node.js to Vercel
 - `cd-python-docker.yml` - (Legacy) Build and push Docker images for Python
@@ -33,7 +34,8 @@ This organization uses a **Self-Hosted Runner** optimized for Intel N100 hardwar
 Ready-to-copy templates for new repositories:
 - `cd-production.template.yml` - **[NEW]** Production CD using Docker
 - `cd-test.template.yml` - **[NEW]** Test CD with automatic milestone tagging
-- `node-ci.template.yml` - Node.js CI template
+- `node-ci.template.yml` - Node.js CI template (GitHub-hosted or self-hosted with npm)
+- `node-ci-selfhosted.template.yml` - Node.js CI template for self-hosted runners **without npm**
 - `node-cd.template.yml` - Node.js CD template
 - `python-ci.template.yml` - Python CI template
 - `python-cd.template.yml` - Python CD template
@@ -58,6 +60,8 @@ Ready-to-copy templates for new repositories:
 ```bash
 ./scripts/setup-repo.sh my-frontend-app node
 ```
+
+> **Self-Hosted Runner without npm?** Use `node-ci-selfhosted.template.yml` instead. It installs pnpm standalone and targets `[self-hosted, n100]` by default. See `ci-node-selfhosted.yml` for details.
 
 ### New Python Repository
 

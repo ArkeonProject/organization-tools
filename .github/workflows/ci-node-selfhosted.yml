@@ -1,0 +1,188 @@
+# .github/workflows/ci-node-selfhosted.yml
+# Reusable workflow for Node.js CI on self-hosted runners without npm available.
+# Installs pnpm standalone (no npm required) for projects like arkeon-blog.
+
+name: 🔷 CI - Node.js (Self-Hosted)
+
+on:
+  workflow_call:
+    inputs:
+      node-version:
+        description: 'Node.js version'
+        required: false
+        type: string
+        default: '20'
+
+      package-manager:
+        description: 'Package manager (only pnpm supported in self-hosted mode)'
+        required: false
+        type: string
+        default: 'pnpm'
+
+      runner:
+        description: 'Runner labels as JSON array (e.g. ["self-hosted","n100"]) or single label string'
+        required: false
+        type: string
+        default: '["self-hosted", "n100"]'
+
+      working-directory:
+        description: 'Working directory for monorepo support'
+        required: false
+        type: string
+        default: '.'
+
+      run-lint:
+        description: 'Run linting'
+        required: false
+        type: boolean
+        default: true
+
+      run-typecheck:
+        description: 'Run type checking'
+        required: false
+        type: boolean
+        default: true
+
+      run-tests:
+        description: 'Run tests'
+        required: false
+        type: boolean
+        default: true
+
+      run-build:
+        description: 'Run build'
+        required: false
+        type: boolean
+        default: true
+
+      build-command:
+        description: 'Custom build command'
+        required: false
+        type: string
+        default: 'build'
+
+      test-command:
+        description: 'Custom test command'
+        required: false
+        type: string
+        default: 'test'
+
+      upload-coverage:
+        description: 'Upload test coverage'
+        required: false
+        type: boolean
+        default: false
+
+      upload-artifacts:
+        description: 'Upload build artifacts'
+        required: false
+        type: boolean
+        default: false
+
+    outputs:
+      build-success:
+        description: 'Build completed successfully'
+        value: ${{ jobs.ci.outputs.build-success }}
+
+      artifact-name:
+        description: 'Name of uploaded artifact'
+        value: ${{ jobs.ci.outputs.artifact-name }}
+
+jobs:
+  ci:
+    name: CI Pipeline (Self-Hosted)
+    runs-on: ${{ contains(inputs.runner, '[') && fromJSON(inputs.runner) || inputs.runner }}
+    timeout-minutes: 15
+
+    outputs:
+      build-success: ${{ steps.build.outcome == 'success' }}
+      artifact-name: ${{ steps.artifact.outputs.name }}
+
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
+
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: 🛠️ Install pnpm (standalone)
+        run: |
+          echo "Installing pnpm standalone (no npm required)..."
+          wget -qO- https://get.pnpm.io/install.sh | ENV="$HOME/.bashrc" SHELL="$(which bash)" PNPM_VERSION=9 bash -
+          PNPM_HOME="$HOME/.local/share/pnpm"
+          echo "$PNPM_HOME" >> "$GITHUB_PATH"
+          echo "PNPM_HOME=$PNPM_HOME" >> "$GITHUB_ENV"
+          export PATH="$PNPM_HOME:$PATH"
+          pnpm --version
+
+      - name: 🧰 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.node-version }}
+          cache: 'pnpm'
+          cache-dependency-path: ${{ inputs.working-directory }}/pnpm-lock.yaml
+
+      - name: 📦 Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: 🔍 Run linting
+        id: lint
+        if: inputs.run-lint
+        run: pnpm run lint
+        continue-on-error: false
+
+      - name: 🔍 Run type checking
+        id: typecheck
+        if: inputs.run-typecheck
+        run: pnpm run typecheck || pnpm run tsc --noEmit
+        continue-on-error: false
+
+      - name: 🧪 Run tests
+        id: test
+        if: inputs.run-tests
+        run: pnpm run ${{ inputs.test-command }}
+        continue-on-error: false
+
+      - name: 📊 Upload coverage reports
+        if: inputs.upload-coverage && steps.test.outcome == 'success'
+        uses: codecov/codecov-action@v6
+        with:
+          working-directory: ${{ inputs.working-directory }}
+          files: ./coverage/lcov.info
+          flags: unittests
+          fail_ci_if_error: false
+
+      - name: 🧱 Build application
+        id: build
+        if: inputs.run-build
+        run: pnpm run ${{ inputs.build-command }}
+        continue-on-error: false
+
+      - name: 📦 Upload build artifacts
+        id: artifact
+        if: inputs.upload-artifacts && steps.build.outcome == 'success'
+        uses: actions/upload-artifact@v7
+        with:
+          name: build-${{ github.sha }}
+          path: |
+            ${{ inputs.working-directory }}/dist
+            ${{ inputs.working-directory }}/build
+            ${{ inputs.working-directory }}/.next
+            ${{ inputs.working-directory }}/out
+          retention-days: 7
+          if-no-files-found: warn
+
+      - name: 📋 Job Summary
+        if: always()
+        run: |
+          echo "## 🔷 CI Results (Self-Hosted)" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Check | Status |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|-------|--------|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Lint | ${{ steps.lint.outcome || 'skipped' }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Type Check | ${{ steps.typecheck.outcome || 'skipped' }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Tests | ${{ steps.test.outcome || 'skipped' }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Build | ${{ steps.build.outcome || 'skipped' }} |" >> "$GITHUB_STEP_SUMMARY"
