@@ -53,6 +53,7 @@ PY >> "$GITHUB_OUTPUT"
       matrix: ${{ fromJson(needs.detect-changed-stacks.outputs.matrix) }}
     uses: ArkeonProject/organization-tools/.github/workflows/reusable-portainer-gitops-cd.yml@main
     with:
+      # runner: '["self-hosted", "n100"]'  # default; override if needed
       endpoint_id: ${{ fromJson(vars.PORTAINER_STACK_MAP)[matrix.stack_name].endpoint_id }}
       stack_name: ${{ matrix.stack_name }}
       stack_id: ${{ fromJson(vars.PORTAINER_STACK_MAP)[matrix.stack_name].stack_id }}

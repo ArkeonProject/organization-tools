@@ -3,6 +3,11 @@ name: Reusable Portainer GitOps CD
 on:
   workflow_call:
     inputs:
+      runner:
+        description: 'Runner labels as JSON array (e.g. ["self-hosted","n100"]) or single label string'
+        required: false
+        type: string
+        default: '["self-hosted", "n100"]'
       endpoint_id:
         description: Portainer endpoint ID
         required: true
@@ -39,7 +44,7 @@ on:
 
 jobs:
   apply-stack:
-    runs-on: ubuntu-latest
+    runs-on: ${{ contains(inputs.runner, '[') && fromJSON(inputs.runner) || inputs.runner }}
     permissions:
       contents: read
 
