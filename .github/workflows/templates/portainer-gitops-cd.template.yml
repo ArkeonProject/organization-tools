@@ -1,0 +1,61 @@
+name: portainer-gitops-cd
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "stacks/**"
+      - ".github/portainer-stack-map.json"
+      - ".github/workflows/portainer-gitops-cd.yml"
+  workflow_dispatch:
+
+jobs:
+  detect-changed-stacks:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.detect.outputs.matrix }}
+      has_changes: ${{ steps.detect.outputs.has_changes }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: detect
+        shell: bash
+        run: |
+          set -euo pipefail
+          BEFORE="${{ github.event.before }}"
+          AFTER="${{ github.sha }}"
+          if [ -z "$BEFORE" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
+            BEFORE=$(git rev-list --max-parents=0 HEAD)
+          fi
+
+          changed=$(git diff --name-only "$BEFORE" "$AFTER" | awk -F/ '/^stacks\//{print $2}' | sort -u)
+
+          if [ -z "$changed" ]; then
+            echo 'matrix={"include":[]}' >> "$GITHUB_OUTPUT"
+            echo 'has_changes=false' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          python3 - <<'PY' "$changed"
+import json,sys
+stacks=[s for s in sys.argv[1].splitlines() if s]
+m={'include':[{'stack_name':s} for s in stacks]}
+print('matrix='+json.dumps(m))
+PY >> "$GITHUB_OUTPUT"
+          echo 'has_changes=true' >> "$GITHUB_OUTPUT"
+
+  deploy-portainer:
+    needs: detect-changed-stacks
+    if: needs.detect-changed-stacks.outputs.has_changes == 'true'
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.detect-changed-stacks.outputs.matrix) }}
+    uses: ArkeonProject/organization-tools/.github/workflows/reusable-portainer-gitops-cd.yml@main
+    with:
+      portainer_base_url: ${{ vars.PORTAINER_BASE_URL }}
+      endpoint_id: ${{ fromJson(vars.PORTAINER_STACK_MAP)[matrix.stack_name].endpoint_id }}
+      stack_name: ${{ matrix.stack_name }}
+      stack_id: ${{ fromJson(vars.PORTAINER_STACK_MAP)[matrix.stack_name].stack_id }}
+    secrets:
+      portainer_api_token: ${{ secrets.PORTAINER_API_TOKEN }}

@@ -1,0 +1,119 @@
+name: Reusable Portainer GitOps CD
+
+on:
+  workflow_call:
+    inputs:
+      portainer_base_url:
+        description: Portainer base URL (e.g. http://portainer:9000)
+        required: true
+        type: string
+      endpoint_id:
+        description: Portainer endpoint ID
+        required: true
+        type: string
+      stack_name:
+        description: Stack logical name (folder under stacks/)
+        required: true
+        type: string
+      stack_id:
+        description: Portainer stack ID
+        required: true
+        type: string
+      compose_path:
+        description: Compose file path in repo
+        required: false
+        default: ""
+        type: string
+      pull_image:
+        description: Pull image before update
+        required: false
+        default: true
+        type: boolean
+      prune:
+        description: Prune services on apply
+        required: false
+        default: false
+        type: boolean
+    secrets:
+      portainer_api_token:
+        required: true
+
+jobs:
+  apply-stack:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Resolve compose path
+        id: resolve
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -n "${{ inputs.compose_path }}" ]; then
+            p="${{ inputs.compose_path }}"
+          else
+            p="stacks/${{ inputs.stack_name }}/docker-compose.yml"
+          fi
+          test -f "$p"
+          echo "compose_path=$p" >> "$GITHUB_OUTPUT"
+
+      - name: Apply stack via Portainer API
+        shell: bash
+        env:
+          PORTAINER_BASE_URL: ${{ inputs.portainer_base_url }}
+          PORTAINER_API_TOKEN: ${{ secrets.portainer_api_token }}
+          ENDPOINT_ID: ${{ inputs.endpoint_id }}
+          STACK_ID: ${{ inputs.stack_id }}
+          STACK_NAME: ${{ inputs.stack_name }}
+          COMPOSE_PATH: ${{ steps.resolve.outputs.compose_path }}
+          PULL_IMAGE: ${{ inputs.pull_image }}
+          PRUNE: ${{ inputs.prune }}
+        run: |
+          set -euo pipefail
+
+          curl -fsS -H "X-API-Key: $PORTAINER_API_TOKEN" \
+            "$PORTAINER_BASE_URL/api/stacks/$STACK_ID" > /tmp/stack.json
+
+          python3 - <<'PY'
+import json, os
+from pathlib import Path
+
+stack = json.loads(Path('/tmp/stack.json').read_text())
+compose = Path(os.environ['COMPOSE_PATH']).read_text()
+
+payload = {
+  'StackFileContent': compose,
+  'Env': stack.get('Env', []),
+  'Prune': str(os.environ.get('PRUNE','false')).lower() == 'true',
+  'PullImage': str(os.environ.get('PULL_IMAGE','true')).lower() == 'true',
+}
+
+Path('/tmp/payload.json').write_text(json.dumps(payload))
+print(f"Prepared payload for {os.environ['STACK_NAME']} with {len(payload['Env'])} env vars")
+PY
+
+          code=$(curl -sS -o /tmp/update-response.json -w "%{http_code}" \
+            -X PUT \
+            -H "X-API-Key: $PORTAINER_API_TOKEN" \
+            -H "Content-Type: application/json" \
+            "$PORTAINER_BASE_URL/api/stacks/$STACK_ID?endpointId=$ENDPOINT_ID" \
+            --data-binary @/tmp/payload.json)
+
+          test "$code" = "200"
+          echo "Stack $STACK_NAME updated (HTTP $code)"
+
+      - name: Show result summary
+        shell: bash
+        run: |
+          python3 - <<'PY'
+import json
+j=json.load(open('/tmp/update-response.json'))
+print('id=',j.get('Id'))
+print('name=',j.get('Name'))
+print('status=',j.get('Status'))
+print('updatedBy=',j.get('UpdatedBy'))
+PY
