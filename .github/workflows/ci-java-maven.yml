@@ -1,0 +1,177 @@
+# .github/workflows/ci-java-maven.yml
+# Reusable workflow for Java CI with Maven
+
+name: ☕ CI - Java/Maven
+
+on:
+  workflow_call:
+    inputs:
+      java-version:
+        description: 'Java version'
+        required: false
+        type: string
+        default: '17'
+
+      working-directory:
+        description: 'Working directory'
+        required: false
+        type: string
+        default: '.'
+
+      run-lint:
+        description: 'Run lint/compile check'
+        required: false
+        type: boolean
+        default: true
+
+      lint-command:
+        description: 'Lint/compile command'
+        required: false
+        type: string
+        default: 'mvn -B -DskipTests compile'
+
+      run-tests:
+        description: 'Run tests'
+        required: false
+        type: boolean
+        default: true
+
+      test-command:
+        description: 'Test command'
+        required: false
+        type: string
+        default: 'mvn -B test'
+
+      run-build:
+        description: 'Run package build'
+        required: false
+        type: boolean
+        default: true
+
+      build-command:
+        description: 'Build/package command'
+        required: false
+        type: string
+        default: 'mvn -B package -DskipTests'
+
+      upload-artifacts:
+        description: 'Upload build artifacts'
+        required: false
+        type: boolean
+        default: false
+
+      artifact-paths:
+        description: 'Artifact paths to upload'
+        required: false
+        type: string
+        default: 'target/'
+
+      artifact-name:
+        description: 'Artifact name'
+        required: false
+        type: string
+        default: 'java-maven-build'
+
+      github-packages-server-id:
+        description: 'Maven server ID for GitHub Packages (e.g., github). If non-empty, configures settings.xml'
+        required: false
+        type: string
+        default: ''
+
+    outputs:
+      build-success:
+        description: 'Build completed successfully'
+        value: ${{ jobs.ci.outputs.build-success }}
+
+      tests-passed:
+        description: 'Tests passed successfully'
+        value: ${{ jobs.ci.outputs.tests-passed }}
+
+      artifact-name:
+        description: 'Name of uploaded artifact'
+        value: ${{ jobs.ci.outputs.artifact-name }}
+
+jobs:
+  ci:
+    name: CI Pipeline
+    runs-on: [self-hosted, n100]
+    timeout-minutes: 20
+
+    outputs:
+      build-success: ${{ steps.build.outcome == 'success' }}
+      tests-passed: ${{ steps.test.outcome == 'success' }}
+      artifact-name: ${{ steps.artifact.outputs.name }}
+
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
+
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: ☕ Setup Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ inputs.java-version }}
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: 🔐 Configure Maven settings.xml for GitHub Packages
+        if: inputs.github-packages-server-id != ''
+        run: |
+          mkdir -p ~/.m2
+          cat > ~/.m2/settings.xml <<EOF
+          <settings>
+            <servers>
+              <server>
+                <id>${{ inputs.github-packages-server-id }}</id>
+                <username>${{ github.actor }}</username>
+                <password>${{ secrets.GITHUB_TOKEN }}</password>
+              </server>
+            </servers>
+          </settings>
+          EOF
+
+      - name: 🔍 Run lint/compile
+        id: lint
+        if: inputs.run-lint
+        run: ${{ inputs.lint-command }}
+        continue-on-error: false
+
+      - name: 🧪 Run tests
+        id: test
+        if: inputs.run-tests
+        run: ${{ inputs.test-command }}
+        continue-on-error: false
+
+      - name: 📦 Build package
+        id: build
+        if: inputs.run-build
+        run: ${{ inputs.build-command }}
+        continue-on-error: false
+
+      - name: 📦 Upload build artifacts
+        id: artifact
+        if: inputs.upload-artifacts && steps.build.outcome == 'success'
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ inputs.artifact-name }}-${{ github.sha }}
+          path: |
+            ${{ inputs.working-directory }}/${{ inputs.artifact-paths }}
+          retention-days: 7
+          if-no-files-found: warn
+
+      - name: 📋 Job Summary
+        if: always()
+        run: |
+          echo "## ☕ Java/Maven CI Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Check | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Lint/Compile | ${{ steps.lint.outcome || 'skipped' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Tests | ${{ steps.test.outcome || 'skipped' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Build | ${{ steps.build.outcome || 'skipped' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Artifacts | ${{ steps.artifact.outcome || 'skipped' }} |" >> $GITHUB_STEP_SUMMARY

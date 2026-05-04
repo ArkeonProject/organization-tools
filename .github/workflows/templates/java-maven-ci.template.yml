@@ -1,0 +1,18 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  ci:
+    name: Continuous Integration
+    uses: ArkeonProject/organization-tools/.github/workflows/ci-java-maven.yml@v1
+    with:
+      java-version: '17'
+      run-lint: true
+      lint-command: 'mvn -B -DskipTests compile'
+      run-tests: true
+      test-command: 'mvn -B test'
+      upload-artifacts: false
+    secrets: inherit

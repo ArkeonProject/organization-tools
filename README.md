@@ -24,6 +24,7 @@ This organization uses a **Self-Hosted Runner** optimized for Intel N100 hardwar
 - `ci-node.yml` - CI for Node.js projects (supports pnpm, npm, yarn, bun)
 - `ci-node-selfhosted.yml` - CI for Node.js on self-hosted runners **without npm** (installs pnpm standalone)
 - `ci-python.yml` - CI for Python projects
+- `ci-java-maven.yml` - CI for Java/Maven projects
 - `cd-node-vercel.yml` - Deploy Node.js to Vercel
 - `cd-python-docker.yml` - (Legacy) Build and push Docker images for Python
 - `release-publish.yml` - Auto-publish releases from conventional commits
@@ -38,6 +39,7 @@ Ready-to-copy templates for new repositories:
 - `node-ci-selfhosted.template.yml` - Node.js CI template for self-hosted runners **without npm**
 - `node-cd.template.yml` - Node.js CD template
 - `python-ci.template.yml` - Python CI template
+- `java-maven-ci.template.yml` - Java/Maven CI template
 - `python-cd.template.yml` - Python CD template
 - `release.template.yml` - Release workflow template
 - `hotfix.template.yml` - Hotfix workflow template
@@ -68,6 +70,14 @@ Ready-to-copy templates for new repositories:
 ```bash
 ./scripts/setup-repo.sh my-backend-api python
 ```
+
+### New Java/Maven Repository
+
+```bash
+cp .github/workflows/templates/java-maven-ci.template.yml .github/workflows/ci.yml
+```
+
+> For GitHub Packages authentication, set `github-packages-server-id` (e.g., `github`) and ensure `secrets: inherit` is passed.
 
 ### Dry Run (Preview Changes)
 
