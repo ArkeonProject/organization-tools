@@ -79,22 +79,22 @@ jobs:
             "$PORTAINER_BASE_URL/api/stacks/$STACK_ID" > /tmp/stack.json
 
           python3 - <<'PY'
-import json, os
-from pathlib import Path
+          import json, os
+          from pathlib import Path
 
-stack = json.loads(Path('/tmp/stack.json').read_text())
-compose = Path(os.environ['COMPOSE_PATH']).read_text()
+          stack = json.loads(Path('/tmp/stack.json').read_text())
+          compose = Path(os.environ['COMPOSE_PATH']).read_text()
 
-payload = {
-  'StackFileContent': compose,
-  'Env': stack.get('Env', []),
-  'Prune': str(os.environ.get('PRUNE','false')).lower() == 'true',
-  'PullImage': str(os.environ.get('PULL_IMAGE','true')).lower() == 'true',
-}
+          payload = {
+            'StackFileContent': compose,
+            'Env': stack.get('Env', []),
+            'Prune': str(os.environ.get('PRUNE','false')).lower() == 'true',
+            'PullImage': str(os.environ.get('PULL_IMAGE','true')).lower() == 'true',
+          }
 
-Path('/tmp/payload.json').write_text(json.dumps(payload))
-print(f"Prepared payload for {os.environ['STACK_NAME']} with {len(payload['Env'])} env vars")
-PY
+          Path('/tmp/payload.json').write_text(json.dumps(payload))
+          print(f"Prepared payload for {os.environ['STACK_NAME']} with {len(payload['Env'])} env vars")
+          PY
 
           code=$(curl -sS -o /tmp/update-response.json -w "%{http_code}" \
             -X PUT \
@@ -110,10 +110,10 @@ PY
         shell: bash
         run: |
           python3 - <<'PY'
-import json
-j=json.load(open('/tmp/update-response.json'))
-print('id=',j.get('Id'))
-print('name=',j.get('Name'))
-print('status=',j.get('Status'))
-print('updatedBy=',j.get('UpdatedBy'))
-PY
+          import json
+          j=json.load(open('/tmp/update-response.json'))
+          print('id=',j.get('Id'))
+          print('name=',j.get('Name'))
+          print('status=',j.get('Status'))
+          print('updatedBy=',j.get('UpdatedBy'))
+          PY
