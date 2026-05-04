@@ -119,6 +119,14 @@ jobs:
           distribution: 'temurin'
           cache: 'maven'
 
+      - name: 🧰 Ensure Maven is installed
+        run: |
+          if ! command -v mvn >/dev/null 2>&1; then
+            curl -fsSL https://archive.apache.org/dist/maven/maven-3/3.9.6/binaries/apache-maven-3.9.6-bin.tar.gz | tar -xz -C /opt
+            ln -sf /opt/apache-maven-3.9.6/bin/mvn /usr/local/bin/mvn
+          fi
+          mvn --version
+
       - name: 🔐 Configure Maven settings.xml for GitHub Packages
         if: inputs.github-packages-server-id != ''
         run: |
